@@ -24,49 +24,25 @@
  */
 package com.healthbar.model;
 
+import java.util.ArrayList;
+import java.util.List;
 import lombok.Data;
 
-/**
- * Represents a user-configured tracked effect entry.
- * Serialized to/from JSON for config storage.
- */
 @Data
-public class TrackedEffectEntry
+public class IndicatorSetup
 {
-	private String effectName; // TrackedEffect enum name
-	private BlinkMode blinkMode;
-	private int dropThreshold; // For skill boost effects: alert when boost drops to this level or below (0 = only alert when fully gone)
-	private int timeoutMinutes; // Per-effect activity timeout in minutes (0 = never timeout)
+	private String name;
+	private List<TrackedEffectEntry> entries;
 
-	private transient TrackedEffect cachedEffect;
-	private transient boolean effectResolved;
-
-	public TrackedEffectEntry()
+	public IndicatorSetup()
 	{
+		this.name = "";
+		this.entries = new ArrayList<>();
 	}
 
-	public TrackedEffectEntry(String effectName, BlinkMode blinkMode, int dropThreshold, int timeoutMinutes)
+	public IndicatorSetup(String name, List<TrackedEffectEntry> entries)
 	{
-		this.effectName = effectName;
-		this.blinkMode = blinkMode;
-		this.dropThreshold = dropThreshold;
-		this.timeoutMinutes = timeoutMinutes;
-	}
-
-	public TrackedEffect getEffect()
-	{
-		if (!effectResolved)
-		{
-			try
-			{
-				cachedEffect = TrackedEffect.valueOf(effectName);
-			}
-			catch (IllegalArgumentException e)
-			{
-				cachedEffect = null;
-			}
-			effectResolved = true;
-		}
-		return cachedEffect;
+		this.name = name;
+		this.entries = new ArrayList<>(entries);
 	}
 }

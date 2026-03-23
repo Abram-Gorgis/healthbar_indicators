@@ -34,6 +34,7 @@ public interface HealthbarIndicatorsConfig extends Config
 {
 	String CONFIG_GROUP = "healthbarIndicators";
 	String TRACKED_EFFECTS_KEY = "trackedEffects";
+	String SETUPS_KEY = "setups";
 
 	@ConfigItem(
 		keyName = "flashRate",

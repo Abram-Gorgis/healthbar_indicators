@@ -22,51 +22,53 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package com.healthbar.model;
+package com.healthbar.ui;
 
-import lombok.Data;
+import java.awt.Dimension;
+import java.awt.Insets;
+import java.awt.event.ActionListener;
+import javax.swing.JButton;
 
-/**
- * Represents a user-configured tracked effect entry.
- * Serialized to/from JSON for config storage.
- */
-@Data
-public class TrackedEffectEntry
+public class ButtonBuilder
 {
-	private String effectName; // TrackedEffect enum name
-	private BlinkMode blinkMode;
-	private int dropThreshold; // For skill boost effects: alert when boost drops to this level or below (0 = only alert when fully gone)
-	private int timeoutMinutes; // Per-effect activity timeout in minutes (0 = never timeout)
+	private final JButton button;
 
-	private transient TrackedEffect cachedEffect;
-	private transient boolean effectResolved;
-
-	public TrackedEffectEntry()
+	private ButtonBuilder(String text)
 	{
+		this.button = new JButton(text);
 	}
 
-	public TrackedEffectEntry(String effectName, BlinkMode blinkMode, int dropThreshold, int timeoutMinutes)
+	public static ButtonBuilder create(String text)
 	{
-		this.effectName = effectName;
-		this.blinkMode = blinkMode;
-		this.dropThreshold = dropThreshold;
-		this.timeoutMinutes = timeoutMinutes;
+		return new ButtonBuilder(text);
 	}
 
-	public TrackedEffect getEffect()
+	public ButtonBuilder size(int width, int height)
 	{
-		if (!effectResolved)
-		{
-			try
-			{
-				cachedEffect = TrackedEffect.valueOf(effectName);
-			}
-			catch (IllegalArgumentException e)
-			{
-				cachedEffect = null;
-			}
-			effectResolved = true;
-		}
-		return cachedEffect;
+		button.setPreferredSize(new Dimension(width, height));
+		return this;
+	}
+
+	public ButtonBuilder margin(int top, int left, int bottom, int right)
+	{
+		button.setMargin(new Insets(top, left, bottom, right));
+		return this;
+	}
+
+	public ButtonBuilder tooltip(String text)
+	{
+		button.setToolTipText(text);
+		return this;
+	}
+
+	public ButtonBuilder onClick(ActionListener listener)
+	{
+		button.addActionListener(listener);
+		return this;
+	}
+
+	public JButton build()
+	{
+		return button;
 	}
 }

@@ -29,11 +29,14 @@ import lombok.Getter;
 @Getter
 public class EffectTracker
 {
+	private static final long MILLIS_PER_MINUTE = 60_000L;
+	private static final int UNINITIALIZED_BOOST = -1;
+
 	private EffectState state = EffectState.INACTIVE;
 	private long expiredAtMillis = 0;
 	private long lastActiveAtMillis = 0;
 	private boolean divineWasActive = false;
-	private int lastKnownBoost = -1;
+	private int lastKnownBoost = UNINITIALIZED_BOOST;
 	private boolean drinkDetected = false;
 
 	/**
@@ -55,7 +58,7 @@ public class EffectTracker
 	 */
 	public void updateBoost(int currentBoost)
 	{
-		if (lastKnownBoost != -1 && currentBoost > lastKnownBoost)
+		if (lastKnownBoost != UNINITIALIZED_BOOST && currentBoost > lastKnownBoost)
 		{
 			drinkDetected = true;
 		}
@@ -234,7 +237,7 @@ public class EffectTracker
 	public boolean isTimedOut(int timeoutMinutes, long now)
 	{
 		return timeoutMinutes > 0 && expiredAtMillis > 0
-			&& now - expiredAtMillis > timeoutMinutes * 60_000L;
+			&& now - expiredAtMillis > timeoutMinutes * MILLIS_PER_MINUTE;
 	}
 
 	public void reset()
@@ -243,7 +246,7 @@ public class EffectTracker
 		this.expiredAtMillis = 0;
 		this.lastActiveAtMillis = 0;
 		this.divineWasActive = false;
-		this.lastKnownBoost = -1;
+		this.lastKnownBoost = UNINITIALIZED_BOOST;
 		this.drinkDetected = false;
 	}
 }

@@ -78,6 +78,8 @@ public class HealthbarIndicatorsPlugin extends Plugin
 {
 	private static final Gson GSON = new Gson();
 	private static final Type ENTRY_LIST_TYPE = new TypeToken<List<TrackedEffectEntry>>(){}.getType();
+	private static final int NAV_ICON_SIZE = 16;
+	private static final int VENOM_IMMUNITY_THRESHOLD = -38;
 
 	@Inject
 	private Client client;
@@ -110,6 +112,7 @@ public class HealthbarIndicatorsPlugin extends Plugin
 	private NavigationButton navButton;
 	private final Map<TrackedEffect, EffectTracker> trackers = new HashMap<>();
 	private final Set<TrackedEffect> chatActivatedEffects = new HashSet<>();
+	private final List<TrackedEffectEntry> flashingEntriesBuffer = new ArrayList<>();
 	private volatile List<TrackedEffectEntry> cachedEntries = Collections.emptyList();
 
 	@Override
@@ -124,8 +127,8 @@ public class HealthbarIndicatorsPlugin extends Plugin
 		spriteManager.getSpriteAsync(SpriteID.SKILL_HITPOINTS, 0, img ->
 		{
 			final BufferedImage icon = (img != null)
-				? ImageUtil.resizeImage(img, 16, 16)
-				: new BufferedImage(16, 16, BufferedImage.TYPE_INT_ARGB);
+				? ImageUtil.resizeImage(img, NAV_ICON_SIZE, NAV_ICON_SIZE)
+				: new BufferedImage(NAV_ICON_SIZE, NAV_ICON_SIZE, BufferedImage.TYPE_INT_ARGB);
 
 			navButton = NavigationButton.builder()
 				.tooltip("Healthbar Indicators")
@@ -185,15 +188,9 @@ public class HealthbarIndicatorsPlugin extends Plugin
 				continue;
 			}
 
-			EffectTracker tracker = trackers.computeIfAbsent(effect, e -> new EffectTracker());
+			EffectTracker tracker = getOrCreateTracker(effect);
 			boolean active = isSkillBoostActive(effect);
-
-			boolean divineActive = false;
-			if (effect.getDivineVarbitId() >= 0)
-			{
-				divineActive = client.getVarbitValue(effect.getDivineVarbitId()) > 0;
-				tracker.updateDivine(divineActive);
-			}
+			boolean divineActive = updateDivineState(effect, tracker);
 
 			if (active)
 			{
@@ -222,11 +219,13 @@ public class HealthbarIndicatorsPlugin extends Plugin
 		// Deactivate chat-based effects when their associated varbit goes to 0
 		if (!chatActivatedEffects.isEmpty())
 		{
-			for (TrackedEffect effect : new ArrayList<>(chatActivatedEffects))
+			java.util.Iterator<TrackedEffect> it = chatActivatedEffects.iterator();
+			while (it.hasNext())
 			{
+				TrackedEffect effect = it.next();
 				if (!isEffectStillActiveByVarbit(effect))
 				{
-					chatActivatedEffects.remove(effect);
+					it.remove();
 					EffectTracker tracker = trackers.get(effect);
 					if (tracker != null)
 					{
@@ -244,26 +243,14 @@ public class HealthbarIndicatorsPlugin extends Plugin
 				continue;
 			}
 
-			EffectDetectionType type = effect.getDetectionType();
-
-			// Only process varbit/prayer/poison/venom/chat effects here
-			if (type == EffectDetectionType.SKILL_BOOST)
+			if (effect.getDetectionType() == EffectDetectionType.SKILL_BOOST)
 			{
-				// Divine varbit may have changed — update divine tracking
-				if (effect.getDivineVarbitId() >= 0)
-				{
-					EffectTracker tracker = trackers.get(effect);
-					if (tracker != null)
-					{
-						boolean divineActive = client.getVarbitValue(effect.getDivineVarbitId()) > 0;
-						tracker.updateDivine(divineActive);
-					}
-				}
+				updateDivineStateIfTracked(effect);
 				continue;
 			}
 
 			boolean active = isEffectCurrentlyActive(effect);
-			EffectTracker tracker = trackers.computeIfAbsent(effect, e -> new EffectTracker());
+			EffectTracker tracker = getOrCreateTracker(effect);
 
 			if (active)
 			{
@@ -303,8 +290,35 @@ public class HealthbarIndicatorsPlugin extends Plugin
 			if (message.contains(effect.getChatPattern()))
 			{
 				chatActivatedEffects.add(effect);
-				EffectTracker tracker = trackers.computeIfAbsent(effect, e -> new EffectTracker());
-				tracker.activate(now);
+				getOrCreateTracker(effect).activate(now);
+			}
+		}
+	}
+
+	private EffectTracker getOrCreateTracker(TrackedEffect effect)
+	{
+		return trackers.computeIfAbsent(effect, e -> new EffectTracker());
+	}
+
+	private boolean updateDivineState(TrackedEffect effect, EffectTracker tracker)
+	{
+		if (effect.getDivineVarbitId() < 0)
+		{
+			return false;
+		}
+		boolean divineActive = client.getVarbitValue(effect.getDivineVarbitId()) > 0;
+		tracker.updateDivine(divineActive);
+		return divineActive;
+	}
+
+	private void updateDivineStateIfTracked(TrackedEffect effect)
+	{
+		if (effect.getDivineVarbitId() >= 0)
+		{
+			EffectTracker tracker = trackers.get(effect);
+			if (tracker != null)
+			{
+				tracker.updateDivine(client.getVarbitValue(effect.getDivineVarbitId()) > 0);
 			}
 		}
 	}
@@ -338,7 +352,7 @@ public class HealthbarIndicatorsPlugin extends Plugin
 
 	public List<TrackedEffectEntry> getFlashingEntries()
 	{
-		List<TrackedEffectEntry> flashing = new ArrayList<>();
+		flashingEntriesBuffer.clear();
 		long now = System.currentTimeMillis();
 
 		for (TrackedEffectEntry entry : getTrackedEntries())
@@ -364,10 +378,10 @@ public class HealthbarIndicatorsPlugin extends Plugin
 
 			if (tracker.isFlashing(entry.getBlinkMode()))
 			{
-				flashing.add(entry);
+				flashingEntriesBuffer.add(entry);
 			}
 		}
-		return flashing;
+		return flashingEntriesBuffer;
 	}
 
 	private void reloadTrackedEntries()
@@ -391,6 +405,23 @@ public class HealthbarIndicatorsPlugin extends Plugin
 			log.warn("Failed to parse tracked effects config", e);
 			cachedEntries = Collections.emptyList();
 		}
+
+		pruneStaleTrackers();
+	}
+
+	private void pruneStaleTrackers()
+	{
+		Set<TrackedEffect> activeEffects = new HashSet<>();
+		for (TrackedEffectEntry entry : cachedEntries)
+		{
+			TrackedEffect effect = entry.getEffect();
+			if (effect != null)
+			{
+				activeEffects.add(effect);
+			}
+		}
+		trackers.keySet().retainAll(activeEffects);
+		chatActivatedEffects.retainAll(activeEffects);
 	}
 
 	private List<TrackedEffectEntry> getTrackedEntries()
@@ -412,7 +443,7 @@ public class HealthbarIndicatorsPlugin extends Plugin
 				return client.getVarpValue(VarPlayerID.POISON) < 0;
 
 			case VENOM_IMMUNITY:
-				return client.getVarpValue(VarPlayerID.POISON) < -38;
+				return client.getVarpValue(VarPlayerID.POISON) < VENOM_IMMUNITY_THRESHOLD;
 
 			case CHAT_MESSAGE:
 				return chatActivatedEffects.contains(effect);

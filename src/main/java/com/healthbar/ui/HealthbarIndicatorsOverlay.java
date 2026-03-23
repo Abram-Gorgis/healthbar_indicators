@@ -47,6 +47,10 @@ import net.runelite.client.ui.overlay.OverlayPriority;
 
 public class HealthbarIndicatorsOverlay extends Overlay
 {
+	private static final int HEIGHT_ABOVE_PLAYER = 60;
+	private static final int ICON_SPACING = 2;
+	private static final int MIN_FLASH_RATE = 100;
+
 	private final Client client;
 	private final HealthbarIndicatorsPlugin plugin;
 	private final HealthbarIndicatorsConfig config;
@@ -79,43 +83,55 @@ public class HealthbarIndicatorsOverlay extends Overlay
 			return null;
 		}
 
+		net.runelite.api.Point screenPos = getPlayerScreenPosition();
+		if (screenPos == null)
+		{
+			return null;
+		}
+
+		if (!isBlinkOn())
+		{
+			return null;
+		}
+
+		drawIcons(graphics, flashingEntries, screenPos);
+		return null;
+	}
+
+	private net.runelite.api.Point getPlayerScreenPosition()
+	{
 		Player localPlayer = client.getLocalPlayer();
 		if (localPlayer == null)
 		{
 			return null;
 		}
 
-		// Get player's screen position
 		LocalPoint lp = localPlayer.getLocalLocation();
 		if (lp == null)
 		{
 			return null;
 		}
 
-		net.runelite.api.Point playerScreenPos = net.runelite.api.Perspective.localToCanvas(
-			client, lp, client.getPlane(), localPlayer.getLogicalHeight() + 60);
-		if (playerScreenPos == null)
-		{
-			return null;
-		}
+		return net.runelite.api.Perspective.localToCanvas(
+			client, lp, client.getPlane(), localPlayer.getLogicalHeight() + HEIGHT_ABOVE_PLAYER);
+	}
 
-		// Determine blink phase
-		int flashRate = Math.max(config.flashRate(), 100);
-		boolean blinkOn = (System.currentTimeMillis() / flashRate) % 2 == 0;
-		if (!blinkOn)
-		{
-			return null;
-		}
+	private boolean isBlinkOn()
+	{
+		int flashRate = Math.max(config.flashRate(), MIN_FLASH_RATE);
+		return (System.currentTimeMillis() / flashRate) % 2 == 0;
+	}
 
+	private void drawIcons(Graphics2D graphics, List<TrackedEffectEntry> entries,
+		net.runelite.api.Point screenPos)
+	{
 		int iconSize = config.iconSize();
-
-		// Center icons above the player's health bar, with user offsets
-		int totalWidth = flashingEntries.size() * (iconSize + 2) - 2;
-		int startX = playerScreenPos.getX() - totalWidth / 2 + config.offsetX();
-		int startY = playerScreenPos.getY() - iconSize - config.offsetY();
+		int totalWidth = entries.size() * (iconSize + ICON_SPACING) - ICON_SPACING;
+		int startX = screenPos.getX() - totalWidth / 2 + config.offsetX();
+		int startY = screenPos.getY() - iconSize - config.offsetY();
 
 		int drawn = 0;
-		for (TrackedEffectEntry entry : flashingEntries)
+		for (TrackedEffectEntry entry : entries)
 		{
 			TrackedEffect effect = entry.getEffect();
 			if (effect == null)
@@ -129,12 +145,10 @@ public class HealthbarIndicatorsOverlay extends Overlay
 				continue;
 			}
 
-			int x = startX + (drawn * (iconSize + 2));
+			int x = startX + (drawn * (iconSize + ICON_SPACING));
 			graphics.drawImage(sprite, x, startY, iconSize, iconSize, null);
 			drawn++;
 		}
-
-		return null;
 	}
 
 	private BufferedImage getSprite(TrackedEffect effect)

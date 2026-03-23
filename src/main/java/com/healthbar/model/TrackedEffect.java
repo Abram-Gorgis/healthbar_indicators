@@ -164,6 +164,10 @@ public enum TrackedEffect
 		Varbits.NMZ_ABSORPTION,
 		ItemID.ABSORPTION_4, true, BlinkMode.ON_EXPIRE, "Buffs"),
 
+	PRAYER_REGENERATION("Prayer Regeneration", EffectDetectionType.VARBIT,
+		Varbits.BUFF_PRAYER_REGENERATION,
+		ItemID.PRAYER_REGENERATION_POTION4, true, BlinkMode.ON_EXPIRE, "Potions"),
+
 	RING_OF_ENDURANCE("Ring of Endurance", EffectDetectionType.VARBIT,
 		Varbits.RING_OF_ENDURANCE_EFFECT,
 		ItemID.RING_OF_ENDURANCE, true, BlinkMode.ON_EXPIRE, "Buffs"),
