@@ -47,9 +47,16 @@ import net.runelite.client.ui.overlay.OverlayPriority;
 
 public class HealthbarIndicatorsOverlay extends Overlay
 {
-	private static final int HEIGHT_ABOVE_PLAYER = 60;
 	private static final int ICON_SPACING = 2;
 	private static final int MIN_FLASH_RATE = 100;
+	private static final double REFERENCE_PLAYER_HEIGHT = 100.0;
+	private static final double MIN_SCALE = 0.25;
+	private static final double MAX_SCALE = 4.0;
+
+	private static final int DEFAULT_HEIGHT_ABOVE = 60;
+	private static final int OVERHEAD_ICON_HEIGHT = 30;
+	private static final int OVERHEAD_ICON_WIDTH = 15;
+	private static final int HEALTHBAR_HEIGHT = 15;
 
 	private final Client client;
 	private final HealthbarIndicatorsPlugin plugin;
@@ -83,23 +90,11 @@ public class HealthbarIndicatorsOverlay extends Overlay
 			return null;
 		}
 
-		net.runelite.api.Point screenPos = getPlayerScreenPosition();
-		if (screenPos == null)
-		{
-			return null;
-		}
-
 		if (!isBlinkOn())
 		{
 			return null;
 		}
 
-		drawIcons(graphics, flashingEntries, screenPos);
-		return null;
-	}
-
-	private net.runelite.api.Point getPlayerScreenPosition()
-	{
 		Player localPlayer = client.getLocalPlayer();
 		if (localPlayer == null)
 		{
@@ -112,8 +107,52 @@ public class HealthbarIndicatorsOverlay extends Overlay
 			return null;
 		}
 
-		return net.runelite.api.Perspective.localToCanvas(
-			client, lp, client.getPlane(), localPlayer.getLogicalHeight() + HEIGHT_ABOVE_PLAYER);
+		int plane = client.getPlane();
+		int height = localPlayer.getLogicalHeight();
+		int iconSize = getEffectiveIconSize(lp, plane, height);
+
+		boolean hasOverhead = localPlayer.getOverheadIcon() != null;
+		boolean hasHealthbar = localPlayer.getHealthRatio() > 0;
+
+		net.runelite.api.Point anchor = getAnchorPosition(lp, plane, height, hasOverhead, hasHealthbar);
+		if (anchor == null)
+		{
+			return null;
+		}
+
+		if (hasOverhead)
+		{
+			drawIconsRightOfAnchor(graphics, flashingEntries, anchor, iconSize);
+		}
+		else
+		{
+			drawIconsCenteredAbove(graphics, flashingEntries, anchor, iconSize);
+		}
+
+		return null;
+	}
+
+	private net.runelite.api.Point getAnchorPosition(LocalPoint lp, int plane, int playerHeight,
+		boolean hasOverhead, boolean hasHealthbar)
+	{
+		if (hasOverhead)
+		{
+			// Anchor at the overhead icon position (centered on player, at icon height)
+			return net.runelite.api.Perspective.localToCanvas(
+				client, lp, plane, playerHeight + DEFAULT_HEIGHT_ABOVE);
+		}
+		else if (hasHealthbar)
+		{
+			// Anchor just above the healthbar
+			return net.runelite.api.Perspective.localToCanvas(
+				client, lp, plane, playerHeight + OVERHEAD_ICON_HEIGHT + HEALTHBAR_HEIGHT);
+		}
+		else
+		{
+			// Default: above the player's head
+			return net.runelite.api.Perspective.localToCanvas(
+				client, lp, plane, playerHeight + DEFAULT_HEIGHT_ABOVE);
+		}
 	}
 
 	private boolean isBlinkOn()
@@ -122,14 +161,58 @@ public class HealthbarIndicatorsOverlay extends Overlay
 		return (System.currentTimeMillis() / flashRate) % 2 == 0;
 	}
 
-	private void drawIcons(Graphics2D graphics, List<TrackedEffectEntry> entries,
-		net.runelite.api.Point screenPos)
+	private int getEffectiveIconSize(LocalPoint lp, int plane, int playerHeight)
 	{
-		int iconSize = config.iconSize();
-		int totalWidth = entries.size() * (iconSize + ICON_SPACING) - ICON_SPACING;
-		int startX = screenPos.getX() - totalWidth / 2 + config.offsetX();
-		int startY = screenPos.getY() - iconSize - config.offsetY();
+		double size = config.iconSize();
+		double damping = config.zoomDamping() / 100.0;
 
+		if (damping > 0)
+		{
+			net.runelite.api.Point bottom = net.runelite.api.Perspective.localToCanvas(
+				client, lp, plane, 0);
+			net.runelite.api.Point top = net.runelite.api.Perspective.localToCanvas(
+				client, lp, plane, playerHeight);
+
+			if (bottom != null && top != null)
+			{
+				double playerScreenHeight = Math.abs(bottom.getY() - top.getY());
+				if (playerScreenHeight >= 1)
+				{
+					double rawScale = config.invertZoomScaling()
+						? REFERENCE_PLAYER_HEIGHT / playerScreenHeight
+						: playerScreenHeight / REFERENCE_PLAYER_HEIGHT;
+					double scale = 1.0 + (rawScale - 1.0) * damping;
+					scale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, scale));
+					size *= scale;
+				}
+			}
+		}
+
+		return Math.max(1, (int) Math.round(size));
+	}
+
+	private void drawIconsCenteredAbove(Graphics2D graphics, List<TrackedEffectEntry> entries,
+		net.runelite.api.Point anchor, int iconSize)
+	{
+		int totalWidth = entries.size() * (iconSize + ICON_SPACING) - ICON_SPACING;
+		int startX = anchor.getX() - totalWidth / 2 + config.offsetX();
+		int startY = anchor.getY() - iconSize + config.offsetY();
+
+		drawIconRow(graphics, entries, startX, startY, iconSize);
+	}
+
+	private void drawIconsRightOfAnchor(Graphics2D graphics, List<TrackedEffectEntry> entries,
+		net.runelite.api.Point anchor, int iconSize)
+	{
+		int startX = anchor.getX() + OVERHEAD_ICON_WIDTH + ICON_SPACING + config.offsetX();
+		int startY = anchor.getY() - iconSize / 2 + config.offsetY();
+
+		drawIconRow(graphics, entries, startX, startY, iconSize);
+	}
+
+	private void drawIconRow(Graphics2D graphics, List<TrackedEffectEntry> entries,
+		int startX, int startY, int iconSize)
+	{
 		int drawn = 0;
 		for (TrackedEffectEntry entry : entries)
 		{

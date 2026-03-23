@@ -35,6 +35,7 @@ public interface HealthbarIndicatorsConfig extends Config
 	String CONFIG_GROUP = "healthbarIndicators";
 	String TRACKED_EFFECTS_KEY = "trackedEffects";
 	String SETUPS_KEY = "setups";
+	String ACTIVE_SETUP_KEY = "activeSetup";
 
 	@ConfigItem(
 		keyName = "flashRate",
@@ -58,12 +59,35 @@ public interface HealthbarIndicatorsConfig extends Config
 		return 20;
 	}
 
+	@Range(min = 0, max = 100)
+	@ConfigItem(
+		keyName = "zoomDamping",
+		name = "Zoom Sensitivity %",
+		description = "How much icons scale with zoom (0 = no scaling, 100 = full scaling)",
+		position = 2
+	)
+	default int zoomDamping()
+	{
+		return 50;
+	}
+
+	@ConfigItem(
+		keyName = "invertZoomScaling",
+		name = "Invert Zoom Scaling",
+		description = "When enabled, icons grow when zooming out (like the healthbar). When disabled, icons shrink when zooming out.",
+		position = 3
+	)
+	default boolean invertZoomScaling()
+	{
+		return true;
+	}
+
 	@Range(min = -500, max = 500)
 	@ConfigItem(
 		keyName = "offsetX",
 		name = "X Offset",
 		description = "Horizontal offset in pixels (negative = left, positive = right)",
-		position = 2
+		position = 4
 	)
 	default int offsetX()
 	{
@@ -75,7 +99,7 @@ public interface HealthbarIndicatorsConfig extends Config
 		keyName = "offsetY",
 		name = "Y Offset",
 		description = "Vertical offset in pixels (negative = down, positive = up)",
-		position = 3
+		position = 5
 	)
 	default int offsetY()
 	{

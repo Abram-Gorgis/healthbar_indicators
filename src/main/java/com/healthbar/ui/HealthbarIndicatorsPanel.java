@@ -92,7 +92,6 @@ public class HealthbarIndicatorsPanel extends PluginPanel
 		add(cardPanel, BorderLayout.CENTER);
 
 		loadSetups();
-		cardLayout.show(cardPanel, PAGE_SETUPS);
 	}
 
 	// =====================================================
@@ -102,6 +101,7 @@ public class HealthbarIndicatorsPanel extends PluginPanel
 	private void navigateToSetups()
 	{
 		activeSetup = null;
+		saveActiveSetupName(null);
 		clearTrackedEffects();
 		setupListPanel.rebuild(setups);
 		cardLayout.show(cardPanel, PAGE_SETUPS);
@@ -110,6 +110,7 @@ public class HealthbarIndicatorsPanel extends PluginPanel
 	private void navigateToEffects(IndicatorSetup setup)
 	{
 		activeSetup = setup;
+		saveActiveSetupName(setup.getName());
 		effectListPanel.setActiveSetup(setup);
 		applyActiveSetup();
 		effectListPanel.rebuild();
@@ -154,6 +155,46 @@ public class HealthbarIndicatorsPanel extends PluginPanel
 		}
 
 		setupListPanel.rebuild(setups);
+
+		if (!restoreActiveSetup())
+		{
+			cardLayout.show(cardPanel, PAGE_SETUPS);
+		}
+	}
+
+	private boolean restoreActiveSetup()
+	{
+		String activeName = configManager.getConfiguration(
+			HealthbarIndicatorsConfig.CONFIG_GROUP,
+			HealthbarIndicatorsConfig.ACTIVE_SETUP_KEY
+		);
+		if (activeName == null || activeName.isEmpty())
+		{
+			return false;
+		}
+
+		for (IndicatorSetup setup : setups)
+		{
+			if (setup.getName().equals(activeName))
+			{
+				activeSetup = setup;
+				effectListPanel.setActiveSetup(setup);
+				applyActiveSetup();
+				effectListPanel.rebuild();
+				cardLayout.show(cardPanel, PAGE_EFFECTS);
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private void saveActiveSetupName(String name)
+	{
+		configManager.setConfiguration(
+			HealthbarIndicatorsConfig.CONFIG_GROUP,
+			HealthbarIndicatorsConfig.ACTIVE_SETUP_KEY,
+			name != null ? name : ""
+		);
 	}
 
 	private List<TrackedEffectEntry> loadLegacyEntries()
@@ -272,6 +313,7 @@ public class HealthbarIndicatorsPanel extends PluginPanel
 
 		if (activeSetup == setup)
 		{
+			saveActiveSetupName(newName);
 			effectListPanel.setTitle(newName);
 		}
 	}
