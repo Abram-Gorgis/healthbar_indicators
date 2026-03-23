@@ -55,6 +55,7 @@ import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.lenient;
@@ -852,5 +853,137 @@ public class HealthbarIndicatorsPluginUnitTest
 		plugin.onVarbitChanged(varbitChanged());
 
 		assertEquals("Both should now be flashing", 2, plugin.getFlashingEntries().size());
+	}
+
+	// =====================================================
+	// Tracker Pruning Tests
+	// =====================================================
+
+	@Test
+	public void testStaleTrackersPrunedOnConfigReload()
+	{
+		setTrackedEntries(entry(TrackedEffect.SUPER_COMBAT, BlinkMode.ON_EXPIRE, 0, 20));
+		when(client.getVarbitValue(anyInt())).thenReturn(0);
+		establishCombatBaseline();
+
+		// Create a tracker by activating
+		simulateBoost(Skill.ATTACK, 99, 118);
+		plugin.onStatChanged(statChanged(Skill.ATTACK));
+
+		Map<TrackedEffect, EffectTracker> trackerMap = getTrackerMap();
+		assertTrue("Tracker should exist", trackerMap.containsKey(TrackedEffect.SUPER_COMBAT));
+
+		// Switch to a different effect — old tracker should be pruned
+		setTrackedEntries(entry(TrackedEffect.RANGING_POTION, BlinkMode.ON_EXPIRE, 0, 20));
+
+		assertFalse("Stale tracker should be pruned", trackerMap.containsKey(TrackedEffect.SUPER_COMBAT));
+	}
+
+	@Test
+	public void testActiveTrackersSurvivePruning()
+	{
+		setTrackedEntries(
+			entry(TrackedEffect.SUPER_COMBAT, BlinkMode.ON_EXPIRE, 0, 20),
+			entry(TrackedEffect.STAMINA, BlinkMode.ON_EXPIRE, 0, 20)
+		);
+		when(client.getVarbitValue(anyInt())).thenReturn(0);
+		establishCombatBaseline();
+
+		// Create trackers
+		simulateBoost(Skill.ATTACK, 99, 118);
+		plugin.onStatChanged(statChanged(Skill.ATTACK));
+		when(client.getVarbitValue(Varbits.RUN_SLOWED_DEPLETION_ACTIVE)).thenReturn(1);
+		plugin.onVarbitChanged(varbitChanged());
+
+		Map<TrackedEffect, EffectTracker> trackerMap = getTrackerMap();
+		assertEquals(2, trackerMap.size());
+
+		// Reload same entries — both should survive
+		setTrackedEntries(
+			entry(TrackedEffect.SUPER_COMBAT, BlinkMode.ON_EXPIRE, 0, 20),
+			entry(TrackedEffect.STAMINA, BlinkMode.ON_EXPIRE, 0, 20)
+		);
+
+		assertEquals("Active trackers should survive pruning", 2, trackerMap.size());
+	}
+
+	@Test
+	public void testEmptyConfigPrunesAllTrackers()
+	{
+		setTrackedEntries(entry(TrackedEffect.SUPER_COMBAT, BlinkMode.ON_EXPIRE, 0, 20));
+		when(client.getVarbitValue(anyInt())).thenReturn(0);
+		establishCombatBaseline();
+
+		simulateBoost(Skill.ATTACK, 99, 118);
+		plugin.onStatChanged(statChanged(Skill.ATTACK));
+
+		// Clear all tracked entries
+		when(configManager.getConfiguration(
+			HealthbarIndicatorsConfig.CONFIG_GROUP,
+			HealthbarIndicatorsConfig.TRACKED_EFFECTS_KEY
+		)).thenReturn("[]");
+		ConfigChanged event = new ConfigChanged();
+		event.setGroup(HealthbarIndicatorsConfig.CONFIG_GROUP);
+		event.setKey(HealthbarIndicatorsConfig.TRACKED_EFFECTS_KEY);
+		plugin.onConfigChanged(event);
+
+		assertTrue("All trackers should be pruned", getTrackerMap().isEmpty());
+	}
+
+	// =====================================================
+	// Prayer Regeneration Potion Test
+	// =====================================================
+
+	@Test
+	public void testPrayerRegenerationPotionTracking()
+	{
+		setTrackedEntries(entry(TrackedEffect.PRAYER_REGENERATION, BlinkMode.ON_EXPIRE, 0, 20));
+
+		when(client.getVarbitValue(Varbits.BUFF_PRAYER_REGENERATION)).thenReturn(1);
+		plugin.onVarbitChanged(varbitChanged());
+		assertTrue("Should not flash while prayer regen active", plugin.getFlashingEntries().isEmpty());
+
+		when(client.getVarbitValue(Varbits.BUFF_PRAYER_REGENERATION)).thenReturn(0);
+		plugin.onVarbitChanged(varbitChanged());
+
+		assertEquals("Should flash when prayer regen expires", 1, plugin.getFlashingEntries().size());
+		assertEquals(TrackedEffect.PRAYER_REGENERATION.name(), plugin.getFlashingEntries().get(0).getEffectName());
+	}
+
+	// =====================================================
+	// Varbit Buff Tests (VARBIT detection, ON_EXPIRE)
+	// =====================================================
+
+	@Test
+	public void testStaminaPotionTracking()
+	{
+		setTrackedEntries(entry(TrackedEffect.STAMINA, BlinkMode.ON_EXPIRE, 0, 20));
+
+		when(client.getVarbitValue(Varbits.RUN_SLOWED_DEPLETION_ACTIVE)).thenReturn(1);
+		plugin.onVarbitChanged(varbitChanged());
+		assertTrue(plugin.getFlashingEntries().isEmpty());
+
+		when(client.getVarbitValue(Varbits.RUN_SLOWED_DEPLETION_ACTIVE)).thenReturn(0);
+		plugin.onVarbitChanged(varbitChanged());
+
+		assertEquals("Stamina should flash on expire", 1, plugin.getFlashingEntries().size());
+	}
+
+	@Test
+	public void testVarbitWhileActiveMode()
+	{
+		setTrackedEntries(entry(TrackedEffect.TELEBLOCK, BlinkMode.WHILE_ACTIVE, 0, 20));
+
+		when(client.getVarbitValue(Varbits.TELEBLOCK)).thenReturn(0);
+		plugin.onVarbitChanged(varbitChanged());
+		assertTrue(plugin.getFlashingEntries().isEmpty());
+
+		when(client.getVarbitValue(Varbits.TELEBLOCK)).thenReturn(1);
+		plugin.onVarbitChanged(varbitChanged());
+		assertEquals("Should flash while teleblocked", 1, plugin.getFlashingEntries().size());
+
+		when(client.getVarbitValue(Varbits.TELEBLOCK)).thenReturn(0);
+		plugin.onVarbitChanged(varbitChanged());
+		assertTrue("Should stop when teleblock ends", plugin.getFlashingEntries().isEmpty());
 	}
 }
