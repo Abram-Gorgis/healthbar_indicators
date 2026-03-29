@@ -15,6 +15,7 @@ repositories {
 
 def runeLiteVersion = 'latest.release'
 def pluginMainClass = 'com.healthbar.HealthbarIndicatorsPlugin'
+def pluginTestClass = 'com.healthbar.HealthbarIndicatorsPluginTest'
 
 dependencies {
 	compileOnly group: 'net.runelite', name:'client', version: runeLiteVersion
@@ -41,7 +42,7 @@ tasks.withType(JavaCompile).configureEach {
 
 tasks.register('run', JavaExec) {
 	classpath = sourceSets.test.runtimeClasspath
-	mainClass = pluginMainClass
+	mainClass = pluginTestClass
 
 	jvmArgs "-ea"
 	args "--developer-mode", "--debug"

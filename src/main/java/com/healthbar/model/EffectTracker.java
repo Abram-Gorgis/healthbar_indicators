@@ -58,7 +58,14 @@ public class EffectTracker
 	 */
 	public void updateBoost(int currentBoost)
 	{
-		if (lastKnownBoost != UNINITIALIZED_BOOST && currentBoost > lastKnownBoost)
+		if (lastKnownBoost == UNINITIALIZED_BOOST)
+		{
+			if (currentBoost > 0)
+			{
+				drinkDetected = true;
+			}
+		}
+		else if (currentBoost > lastKnownBoost)
 		{
 			drinkDetected = true;
 		}

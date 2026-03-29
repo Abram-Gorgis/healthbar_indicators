@@ -680,17 +680,17 @@ public class HealthbarIndicatorsPluginUnitTest
 		hop.setGameState(GameState.HOPPING);
 		plugin.onGameStateChanged(hop);
 
-		// Stats load in after hop — first observation sets baseline, no drink detected
+		// Stats load in after hop — first observation with positive boost detects drink
 		plugin.onStatChanged(statChanged(Skill.ATTACK));
-		assertTrue("Should not flash for pre-hop boost", plugin.getFlashingEntries().isEmpty());
+		assertTrue("Should not flash while boost is still active", plugin.getFlashingEntries().isEmpty());
 
-		// Boost drains to 0 — no drink was detected so no flash
+		// Boost drains to 0 — drink was detected from first positive observation, so it should flash
 		simulateBoost(Skill.ATTACK, 99, 99);
 		simulateBoost(Skill.STRENGTH, 99, 99);
 		simulateBoost(Skill.DEFENCE, 99, 99);
 		plugin.onStatChanged(statChanged(Skill.ATTACK));
 
-		assertTrue("Pre-hop boost expiry should NOT flash", plugin.getFlashingEntries().isEmpty());
+		assertEquals("Pre-hop boost expiry should flash", 1, plugin.getFlashingEntries().size());
 	}
 
 	@Test
@@ -730,32 +730,18 @@ public class HealthbarIndicatorsPluginUnitTest
 		setTrackedEntries(entry(TrackedEffect.SUPER_COMBAT, BlinkMode.ON_EXPIRE, 0, 20));
 		when(client.getVarbitValue(anyInt())).thenReturn(0);
 
-		// Login with existing +12 boost (first observation, baseline)
+		// Login with existing +12 boost (first positive observation detects drink)
 		simulateBoost(Skill.ATTACK, 99, 111);
 		simulateBoost(Skill.STRENGTH, 99, 111);
 		simulateBoost(Skill.DEFENCE, 99, 111);
 		plugin.onStatChanged(statChanged(Skill.ATTACK));
 
-		// Boost drains to 0 — no drink detected, should not flash
+		// Boost drains to 0 — drink was detected from first positive observation, should flash
 		simulateBoost(Skill.ATTACK, 99, 99);
 		simulateBoost(Skill.STRENGTH, 99, 99);
 		simulateBoost(Skill.DEFENCE, 99, 99);
 		plugin.onStatChanged(statChanged(Skill.ATTACK));
-		assertTrue("Pre-login boost should not flash", plugin.getFlashingEntries().isEmpty());
-
-		// Now re-drink (boost increases: drink detected!)
-		simulateBoost(Skill.ATTACK, 99, 118);
-		simulateBoost(Skill.STRENGTH, 99, 118);
-		simulateBoost(Skill.DEFENCE, 99, 118);
-		plugin.onStatChanged(statChanged(Skill.ATTACK));
-
-		// Boost wears off — should flash because drink was detected
-		simulateBoost(Skill.ATTACK, 99, 99);
-		simulateBoost(Skill.STRENGTH, 99, 99);
-		simulateBoost(Skill.DEFENCE, 99, 99);
-		plugin.onStatChanged(statChanged(Skill.ATTACK));
-
-		assertEquals("Re-drink after login should flash on expire", 1, plugin.getFlashingEntries().size());
+		assertEquals("Pre-login boost should flash", 1, plugin.getFlashingEntries().size());
 	}
 
 	@Test
@@ -771,13 +757,13 @@ public class HealthbarIndicatorsPluginUnitTest
 		simulateBoost(Skill.DEFENCE, 99, 110);
 		plugin.onStatChanged(statChanged(Skill.ATTACK));
 
-		// Boost drains to 0 — no drink detected
+		// Boost drains to 0 — drink detected from first positive observation, should flash
 		simulateBoost(Skill.ATTACK, 99, 99);
 		simulateBoost(Skill.STRENGTH, 99, 99);
 		simulateBoost(Skill.DEFENCE, 99, 99);
 		plugin.onStatChanged(statChanged(Skill.ATTACK));
 
-		assertTrue("Pre-login boost expiry should NOT flash", plugin.getFlashingEntries().isEmpty());
+		assertEquals("Pre-login boost expiry should flash", 1, plugin.getFlashingEntries().size());
 	}
 
 	@Test

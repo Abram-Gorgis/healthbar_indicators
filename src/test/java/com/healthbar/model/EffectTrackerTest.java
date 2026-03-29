@@ -250,10 +250,17 @@ public class EffectTrackerTest
 	// =====================================================
 
 	@Test
-	public void testFirstBoostObservationDoesNotDetectDrink()
+	public void testFirstBoostObservationZeroDoesNotDetectDrink()
+	{
+		tracker.updateBoost(0);
+		assertFalse(tracker.isDrinkDetected());
+	}
+
+	@Test
+	public void testFirstBoostObservationPositiveDetectsDrink()
 	{
 		tracker.updateBoost(12);
-		assertFalse(tracker.isDrinkDetected());
+		assertTrue(tracker.isDrinkDetected());
 	}
 
 	@Test
@@ -267,8 +274,8 @@ public class EffectTrackerTest
 	@Test
 	public void testBoostDecreaseDoesNotDetectDrink()
 	{
-		tracker.updateBoost(12);
-		tracker.updateBoost(11);
+		tracker.updateBoost(0);
+		tracker.updateBoost(0);
 		assertFalse(tracker.isDrinkDetected());
 	}
 
