@@ -40,3 +40,16 @@ Teleblock, In Wilderness
 
 ### Prayers
 All standard prayers, protection prayers, Piety, Rigour, Augury, Preserve, Deadeye, Mystic Vigour, and all Ruinous Powers prayers
+
+
+## Images
+#### Plugin settings
+<img width="280" height="256" alt="image1" src="https://github.com/user-attachments/assets/153f2f7b-6612-42a0-b24a-d8707eb47e20" />
+
+
+#### Setup Page
+<img width="277" height="297" alt="setup" src="https://github.com/user-attachments/assets/f639edc5-307d-4327-9733-aa464ba06614" />
+
+#### Tracker Page
+<img width="263" height="398" alt="setup3" src="https://github.com/user-attachments/assets/0f7eed5d-3df5-4c14-9b8c-b6d6824461b9" />
+
