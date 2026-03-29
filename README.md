@@ -2,6 +2,10 @@
 
 A RuneLite plugin that flashes small game-sprite icons above your character when tracked effects expire, activate, or hit a configurable threshold.
 
+
+https://github.com/user-attachments/assets/a37d92ef-f13f-4fc3-a484-5879c3c72216
+
+
 ## Features
 
 - **Track potions, buffs, prayers, and debuffs** — choose from 60+ effects including combat potions, divine potions, stamina, antifire, antipoison, prayers, thralls, and more
