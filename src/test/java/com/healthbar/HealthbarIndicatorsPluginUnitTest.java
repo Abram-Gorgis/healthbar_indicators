@@ -87,6 +87,7 @@ public class HealthbarIndicatorsPluginUnitTest
 	public void setUp() throws Exception
 	{
 		plugin = new HealthbarIndicatorsPlugin();
+		setField("gson", GSON);
 		setField("client", client);
 		setField("configManager", configManager);
 		setField("overlayManager", overlayManager);

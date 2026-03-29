@@ -43,11 +43,11 @@ import net.runelite.client.ui.PluginPanel;
 
 public class HealthbarIndicatorsPanel extends PluginPanel
 {
-	private static final Gson GSON = new Gson();
 	private static final Type SETUP_LIST_TYPE = new TypeToken<List<IndicatorSetup>>(){}.getType();
 	private static final String PAGE_SETUPS = "setups";
 	private static final String PAGE_EFFECTS = "effects";
 
+	private final Gson gson;
 	private final ConfigManager configManager;
 
 	private final CardLayout cardLayout;
@@ -60,9 +60,10 @@ public class HealthbarIndicatorsPanel extends PluginPanel
 	private IndicatorSetup activeSetup;
 	private Runnable resetCallback;
 
-	public HealthbarIndicatorsPanel(ConfigManager configManager, ItemManager itemManager, SpriteManager spriteManager)
+	public HealthbarIndicatorsPanel(Gson gson, ConfigManager configManager, ItemManager itemManager, SpriteManager spriteManager)
 	{
 		super(false);
+		this.gson = gson;
 		this.configManager = configManager;
 
 		setLayout(new BorderLayout());
@@ -132,7 +133,7 @@ public class HealthbarIndicatorsPanel extends PluginPanel
 		{
 			try
 			{
-				List<IndicatorSetup> loaded = GSON.fromJson(json, SETUP_LIST_TYPE);
+				List<IndicatorSetup> loaded = gson.fromJson(json, SETUP_LIST_TYPE);
 				if (loaded != null)
 				{
 					setups.addAll(loaded);
@@ -208,7 +209,7 @@ public class HealthbarIndicatorsPanel extends PluginPanel
 			try
 			{
 				Type listType = new TypeToken<List<TrackedEffectEntry>>(){}.getType();
-				List<TrackedEffectEntry> loaded = GSON.fromJson(json, listType);
+				List<TrackedEffectEntry> loaded = gson.fromJson(json, listType);
 				if (loaded != null)
 				{
 					return loaded;
@@ -227,7 +228,7 @@ public class HealthbarIndicatorsPanel extends PluginPanel
 		configManager.setConfiguration(
 			HealthbarIndicatorsConfig.CONFIG_GROUP,
 			HealthbarIndicatorsConfig.SETUPS_KEY,
-			GSON.toJson(setups)
+			gson.toJson(setups)
 		);
 	}
 
@@ -239,7 +240,7 @@ public class HealthbarIndicatorsPanel extends PluginPanel
 
 	private void applyActiveSetup()
 	{
-		String json = (activeSetup != null) ? GSON.toJson(activeSetup.getEntries()) : "[]";
+		String json = (activeSetup != null) ? gson.toJson(activeSetup.getEntries()) : "[]";
 		configManager.setConfiguration(
 			HealthbarIndicatorsConfig.CONFIG_GROUP,
 			HealthbarIndicatorsConfig.TRACKED_EFFECTS_KEY,

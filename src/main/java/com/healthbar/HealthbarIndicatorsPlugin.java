@@ -76,10 +76,12 @@ import net.runelite.client.util.ImageUtil;
 )
 public class HealthbarIndicatorsPlugin extends Plugin
 {
-	private static final Gson GSON = new Gson();
 	private static final Type ENTRY_LIST_TYPE = new TypeToken<List<TrackedEffectEntry>>(){}.getType();
 	private static final int NAV_ICON_SIZE = 16;
 	private static final int VENOM_IMMUNITY_THRESHOLD = -38;
+
+	@Inject
+	private Gson gson;
 
 	@Inject
 	private Client client;
@@ -121,7 +123,7 @@ public class HealthbarIndicatorsPlugin extends Plugin
 		reloadTrackedEntries();
 		overlayManager.add(overlay);
 
-		panel = new HealthbarIndicatorsPanel(configManager, itemManager, spriteManager);
+		panel = new HealthbarIndicatorsPanel(gson, configManager, itemManager, spriteManager);
 		panel.setResetCallback(() -> clientThread.invokeLater(this::resetAllTrackers));
 
 		spriteManager.getSpriteAsync(SpriteID.SKILL_HITPOINTS, 0, img ->
@@ -397,7 +399,7 @@ public class HealthbarIndicatorsPlugin extends Plugin
 
 		try
 		{
-			List<TrackedEffectEntry> list = GSON.fromJson(json, ENTRY_LIST_TYPE);
+			List<TrackedEffectEntry> list = gson.fromJson(json, ENTRY_LIST_TYPE);
 			cachedEntries = list != null ? Collections.unmodifiableList(list) : Collections.emptyList();
 		}
 		catch (Exception e)
