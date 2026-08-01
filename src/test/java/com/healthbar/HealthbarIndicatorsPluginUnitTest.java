@@ -46,7 +46,6 @@ import net.runelite.api.Skill;
 import net.runelite.api.Varbits;
 import net.runelite.api.events.ChatMessage;
 import net.runelite.api.events.GameStateChanged;
-import net.runelite.api.events.GameTick;
 import net.runelite.api.events.StatChanged;
 import net.runelite.api.events.VarbitChanged;
 import net.runelite.client.callback.ClientThread;
@@ -596,18 +595,15 @@ public class HealthbarIndicatorsPluginUnitTest
 	{
 		setTrackedEntries(entry(TrackedEffect.MARK_OF_DARKNESS, BlinkMode.ON_EXPIRE, 0, 20));
 		when(client.getRealSkillLevel(Skill.MAGIC)).thenReturn(99);
-		when(client.getTickCount()).thenReturn(100);
 
 		plugin.onChatMessage(chatMessage("<col=ef1020>You have placed a Mark of Darkness upon yourself.</col>"));
-		assertTrue(plugin.getFlashingEntries().isEmpty());
+		EffectTracker tracker = getTrackerMap().get(TrackedEffect.MARK_OF_DARKNESS);
+		long endTime = tracker.getTimedEffectTimer().getEndTimeMillis();
 
-		when(client.getTickCount()).thenReturn(396);
-		plugin.onGameTick(new GameTick());
-		assertTrue("Mark should remain active before its expiration tick", plugin.getFlashingEntries().isEmpty());
+		assertTrue("Mark should remain active before its timer ends",
+			plugin.getFlashingEntries(endTime - 1).isEmpty());
 
-		when(client.getTickCount()).thenReturn(397);
-		plugin.onGameTick(new GameTick());
-		assertEquals(1, plugin.getFlashingEntries().size());
+		assertEquals(1, plugin.getFlashingEntries(endTime).size());
 	}
 
 	@Test
@@ -617,18 +613,14 @@ public class HealthbarIndicatorsPluginUnitTest
 		when(client.getRealSkillLevel(Skill.MAGIC)).thenReturn(99);
 		when(client.getItemContainer(InventoryID.EQUIPMENT)).thenReturn(equipment);
 		when(equipment.getItem(anyInt())).thenReturn(new Item(ItemID.PURGING_STAFF, 1));
-		when(client.getTickCount()).thenReturn(100);
 
 		plugin.onChatMessage(chatMessage("You have placed a Mark of Darkness upon yourself."));
+		EffectTracker tracker = getTrackerMap().get(TrackedEffect.MARK_OF_DARKNESS);
+		long durationMillis = tracker.getTimedEffectTimer().getEndTimeMillis()
+			- tracker.getLastActiveAtMillis();
 
-		when(client.getTickCount()).thenReturn(397);
-		plugin.onGameTick(new GameTick());
-		assertTrue("Purging staff should extend Mark beyond its normal duration",
-			plugin.getFlashingEntries().isEmpty());
-
-		when(client.getTickCount()).thenReturn(1585);
-		plugin.onGameTick(new GameTick());
-		assertEquals(1, plugin.getFlashingEntries().size());
+		assertEquals("Purging staff should multiply Mark's duration by five",
+			99 * 3 * 5 * 600L, durationMillis);
 	}
 
 	@Test
@@ -636,14 +628,13 @@ public class HealthbarIndicatorsPluginUnitTest
 	{
 		setTrackedEntries(entry(TrackedEffect.WARD_OF_ARCEUUS, BlinkMode.ON_EXPIRE, 0, 20));
 		when(client.getRealSkillLevel(Skill.MAGIC)).thenReturn(99);
-		when(client.getTickCount()).thenReturn(100);
 
 		plugin.onChatMessage(chatMessage("Your defence against Arceuus magic has been strengthened."));
-		assertTrue(plugin.getFlashingEntries().isEmpty());
+		EffectTracker tracker = getTrackerMap().get(TrackedEffect.WARD_OF_ARCEUUS);
+		long endTime = tracker.getTimedEffectTimer().getEndTimeMillis();
 
-		when(client.getTickCount()).thenReturn(199);
-		plugin.onGameTick(new GameTick());
-		assertEquals(1, plugin.getFlashingEntries().size());
+		assertTrue(plugin.getFlashingEntries(endTime - 1).isEmpty());
+		assertEquals(1, plugin.getFlashingEntries(endTime).size());
 	}
 
 	// =====================================================
@@ -684,6 +675,26 @@ public class HealthbarIndicatorsPluginUnitTest
 		plugin.onGameStateChanged(logout);
 
 		assertTrue("Login screen should clear all flashing", plugin.getFlashingEntries().isEmpty());
+	}
+
+	@Test
+	public void testSessionChangePreservesActiveTimedEffect()
+	{
+		setTrackedEntries(entry(TrackedEffect.WARD_OF_ARCEUUS, BlinkMode.ON_EXPIRE, 0, 20));
+		when(client.getRealSkillLevel(Skill.MAGIC)).thenReturn(99);
+		plugin.onChatMessage(chatMessage("Your defence against Arceuus magic has been strengthened."));
+
+		EffectTracker tracker = getTrackerMap().get(TrackedEffect.WARD_OF_ARCEUUS);
+		long endTime = tracker.getTimedEffectTimer().getEndTimeMillis();
+
+		GameStateChanged logout = new GameStateChanged();
+		logout.setGameState(GameState.LOGIN_SCREEN);
+		plugin.onGameStateChanged(logout);
+
+		assertEquals("Logout should retain the original timed-effect deadline", endTime,
+			tracker.getTimedEffectTimer().getEndTimeMillis());
+		assertTrue(plugin.getFlashingEntries(endTime - 1).isEmpty());
+		assertEquals(1, plugin.getFlashingEntries(endTime).size());
 	}
 
 	// =====================================================

@@ -246,14 +246,29 @@ public class EffectTrackerTest
 	}
 
 	@Test
-	public void testTimedActivationExpiresOnItsGameTick()
+	public void testTimedActivationExpiresWhenTimerFinishes()
 	{
-		tracker.activateUntilTick(1000, 50);
-		assertFalse(tracker.expireIfDue(49, 2000));
+		tracker.activateForDuration(1000, 5000);
+		assertFalse(tracker.expireIfTimerFinished(5999));
 		assertEquals(EffectState.ACTIVE, tracker.getState());
 
-		assertTrue(tracker.expireIfDue(50, 3000));
+		assertTrue(tracker.expireIfTimerFinished(6000));
 		assertEquals(EffectState.EXPIRED_FLASHING, tracker.getState());
+	}
+
+	@Test
+	public void testRecastingTimedEffectReplacesExpiredTimer()
+	{
+		tracker.activateForDuration(1000, 5000);
+		assertTrue(tracker.expireIfTimerFinished(6000));
+		assertEquals(6000, tracker.getExpiredAtMillis());
+
+		tracker.activateForDuration(7000, 5000);
+		assertEquals(EffectState.ACTIVE, tracker.getState());
+		assertEquals(0, tracker.getExpiredAtMillis());
+		assertEquals(12_000, tracker.getTimedEffectTimer().getEndTimeMillis());
+		assertFalse(tracker.expireIfTimerFinished(11_999));
+		assertTrue(tracker.expireIfTimerFinished(12_000));
 	}
 
 	// =====================================================

@@ -24,6 +24,7 @@
  */
 package com.healthbar.model;
 
+import com.healthbar.timing.TimedEffectTimer;
 import lombok.Getter;
 
 @Getter
@@ -31,7 +32,6 @@ public class EffectTracker
 {
 	private static final long MILLIS_PER_MINUTE = 60_000L;
 	private static final int UNINITIALIZED_BOOST = -1;
-	private static final int NO_EXPIRATION_TICK = -1;
 
 	private EffectState state = EffectState.INACTIVE;
 	private long expiredAtMillis = 0;
@@ -39,7 +39,7 @@ public class EffectTracker
 	private boolean divineWasActive = false;
 	private int lastKnownBoost = UNINITIALIZED_BOOST;
 	private boolean drinkDetected = false;
-	private int expirationTick = NO_EXPIRATION_TICK;
+	private TimedEffectTimer timedEffectTimer;
 
 	/**
 	 * Records that a divine potion variant was seen active.
@@ -90,24 +90,25 @@ public class EffectTracker
 	{
 		state = EffectState.ACTIVE;
 		lastActiveAtMillis = now;
-		expirationTick = NO_EXPIRATION_TICK;
+		timedEffectTimer = null;
 	}
 
-	public void activateUntilTick(long now, int expiresAtTick)
+	public void activateForDuration(long now, long durationMillis)
 	{
 		state = EffectState.ACTIVE;
 		lastActiveAtMillis = now;
-		expirationTick = expiresAtTick;
+		expiredAtMillis = 0;
+		timedEffectTimer = new TimedEffectTimer(now, durationMillis);
 	}
 
 	/**
-	 * Expires a timed effect once its stored game-tick deadline is reached.
+	 * Expires a timed effect once its internal countdown has finished.
 	 */
-	public boolean expireIfDue(int currentTick, long now)
+	public boolean expireIfTimerFinished(long now)
 	{
-		if (expirationTick != NO_EXPIRATION_TICK && currentTick >= expirationTick)
+		if (timedEffectTimer != null && timedEffectTimer.isFinished(now))
 		{
-			expirationTick = NO_EXPIRATION_TICK;
+			timedEffectTimer = null;
 			return tryExpire(now);
 		}
 		return false;
@@ -278,6 +279,6 @@ public class EffectTracker
 		this.divineWasActive = false;
 		this.lastKnownBoost = UNINITIALIZED_BOOST;
 		this.drinkDetected = false;
-		this.expirationTick = NO_EXPIRATION_TICK;
+		this.timedEffectTimer = null;
 	}
 }

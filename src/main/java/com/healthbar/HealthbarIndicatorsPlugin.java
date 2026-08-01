@@ -56,7 +56,6 @@ import net.runelite.api.SpriteID;
 import net.runelite.api.gameval.VarPlayerID;
 import net.runelite.api.events.ChatMessage;
 import net.runelite.api.events.GameStateChanged;
-import net.runelite.api.events.GameTick;
 import net.runelite.api.events.StatChanged;
 import net.runelite.api.events.VarbitChanged;
 import net.runelite.client.callback.ClientThread;
@@ -84,6 +83,7 @@ public class HealthbarIndicatorsPlugin extends Plugin
 	private static final Type ENTRY_LIST_TYPE = new TypeToken<List<TrackedEffectEntry>>(){}.getType();
 	private static final int NAV_ICON_SIZE = 16;
 	private static final int VENOM_IMMUNITY_THRESHOLD = -38;
+	private static final long GAME_TICK_MILLIS = 600L;
 
 	@Inject
 	private Gson gson;
@@ -176,7 +176,7 @@ public class HealthbarIndicatorsPlugin extends Plugin
 		GameState state = event.getGameState();
 		if (state == GameState.HOPPING || state == GameState.LOGIN_SCREEN)
 		{
-			resetAllTrackers();
+			resetTrackersForSessionChange();
 			overlay.clearSpriteCache();
 		}
 	}
@@ -306,8 +306,8 @@ public class HealthbarIndicatorsPlugin extends Plugin
 					int durationTicks = definition.calculateDurationTicks(client);
 					if (durationTicks > 0)
 					{
-						getOrCreateTracker(effect).activateUntilTick(
-							now, client.getTickCount() + durationTicks);
+						getOrCreateTracker(effect).activateForDuration(
+							now, durationTicks * GAME_TICK_MILLIS);
 					}
 				}
 			}
@@ -316,26 +316,6 @@ public class HealthbarIndicatorsPlugin extends Plugin
 			{
 				chatActivatedEffects.add(effect);
 				getOrCreateTracker(effect).activate(now);
-			}
-		}
-	}
-
-	@Subscribe
-	public void onGameTick(GameTick event)
-	{
-		int currentTick = client.getTickCount();
-		long now = System.currentTimeMillis();
-		for (TrackedEffectEntry entry : getTrackedEntries())
-		{
-			TrackedEffect effect = entry.getEffect();
-			if (effect == null || effect.getDetectionType() != EffectDetectionType.TIMED_CHAT_MESSAGE)
-			{
-				continue;
-			}
-			EffectTracker tracker = trackers.get(effect);
-			if (tracker != null)
-			{
-				tracker.expireIfDue(currentTick, now);
 			}
 		}
 	}
@@ -397,8 +377,12 @@ public class HealthbarIndicatorsPlugin extends Plugin
 
 	public List<TrackedEffectEntry> getFlashingEntries()
 	{
+		return getFlashingEntries(System.currentTimeMillis());
+	}
+
+	List<TrackedEffectEntry> getFlashingEntries(long now)
+	{
 		flashingEntriesBuffer.clear();
-		long now = System.currentTimeMillis();
 
 		for (TrackedEffectEntry entry : getTrackedEntries())
 		{
@@ -413,6 +397,8 @@ public class HealthbarIndicatorsPlugin extends Plugin
 			{
 				continue;
 			}
+
+			tracker.expireIfTimerFinished(now);
 
 			if (tracker.isTimedOut(entry.getTimeoutMinutes(), now))
 			{
@@ -513,6 +499,21 @@ public class HealthbarIndicatorsPlugin extends Plugin
 		for (EffectTracker tracker : trackers.values())
 		{
 			tracker.reset();
+		}
+		chatActivatedEffects.clear();
+	}
+
+	private void resetTrackersForSessionChange()
+	{
+		for (Map.Entry<TrackedEffect, EffectTracker> entry : trackers.entrySet())
+		{
+			boolean activeTimedEffect = entry.getKey().getDetectionType()
+				== EffectDetectionType.TIMED_CHAT_MESSAGE
+				&& entry.getValue().getTimedEffectTimer() != null;
+			if (!activeTimedEffect)
+			{
+				entry.getValue().reset();
+			}
 		}
 		chatActivatedEffects.clear();
 	}
