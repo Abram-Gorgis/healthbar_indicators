@@ -245,6 +245,17 @@ public class EffectTrackerTest
 		assertEquals(EffectState.INACTIVE, tracker.getState());
 	}
 
+	@Test
+	public void testTimedActivationExpiresOnItsGameTick()
+	{
+		tracker.activateUntilTick(1000, 50);
+		assertFalse(tracker.expireIfDue(49, 2000));
+		assertEquals(EffectState.ACTIVE, tracker.getState());
+
+		assertTrue(tracker.expireIfDue(50, 3000));
+		assertEquals(EffectState.EXPIRED_FLASHING, tracker.getState());
+	}
+
 	// =====================================================
 	// Drink detection (updateBoost)
 	// =====================================================

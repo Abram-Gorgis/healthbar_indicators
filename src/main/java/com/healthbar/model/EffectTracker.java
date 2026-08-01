@@ -31,6 +31,7 @@ public class EffectTracker
 {
 	private static final long MILLIS_PER_MINUTE = 60_000L;
 	private static final int UNINITIALIZED_BOOST = -1;
+	private static final int NO_EXPIRATION_TICK = -1;
 
 	private EffectState state = EffectState.INACTIVE;
 	private long expiredAtMillis = 0;
@@ -38,6 +39,7 @@ public class EffectTracker
 	private boolean divineWasActive = false;
 	private int lastKnownBoost = UNINITIALIZED_BOOST;
 	private boolean drinkDetected = false;
+	private int expirationTick = NO_EXPIRATION_TICK;
 
 	/**
 	 * Records that a divine potion variant was seen active.
@@ -88,6 +90,27 @@ public class EffectTracker
 	{
 		state = EffectState.ACTIVE;
 		lastActiveAtMillis = now;
+		expirationTick = NO_EXPIRATION_TICK;
+	}
+
+	public void activateUntilTick(long now, int expiresAtTick)
+	{
+		state = EffectState.ACTIVE;
+		lastActiveAtMillis = now;
+		expirationTick = expiresAtTick;
+	}
+
+	/**
+	 * Expires a timed effect once its stored game-tick deadline is reached.
+	 */
+	public boolean expireIfDue(int currentTick, long now)
+	{
+		if (expirationTick != NO_EXPIRATION_TICK && currentTick >= expirationTick)
+		{
+			expirationTick = NO_EXPIRATION_TICK;
+			return tryExpire(now);
+		}
+		return false;
 	}
 
 	/**
@@ -255,5 +278,6 @@ public class EffectTracker
 		this.divineWasActive = false;
 		this.lastKnownBoost = UNINITIALIZED_BOOST;
 		this.drinkDetected = false;
+		this.expirationTick = NO_EXPIRATION_TICK;
 	}
 }

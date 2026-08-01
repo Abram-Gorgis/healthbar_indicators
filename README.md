@@ -33,7 +33,7 @@ https://github.com/user-attachments/assets/a37d92ef-f13f-4fc3-a484-5879c3c72216
 Super Combat, Super Attack, Super Strength, Super Defence, Ranging, Magic, Attack, Strength, Defence, Combat, Bastion, Battlemage, Saradomin Brew, Prayer Regeneration, and all Divine variants
 
 ### Buffs
-Stamina, Antifire, Super Antifire, Antipoison, Antivenom, Imbued Heart, Magic Imbue, Vengeance, Moonlight Potion, NMZ Absorption, Ring of Endurance, Shadow Veil, Death Charge, Thrall Active, Thrall Cooldown
+Stamina, Antifire, Super Antifire, Antipoison, Antivenom, Imbued Heart, Saturated Heart, Magic Imbue, Vengeance, Moonlight Potion, NMZ Absorption, Ring of Endurance, Shadow Veil, Death Charge, Mark of Darkness, Ward of Arceuus, Thrall Active, Thrall Cooldown
 
 ### Debuffs
 Teleblock, In Wilderness
@@ -52,4 +52,3 @@ All standard prayers, protection prayers, Piety, Rigour, Augury, Preserve, Deade
 
 #### Tracker Page
 <img width="263" height="398" alt="setup3" src="https://github.com/user-attachments/assets/0f7eed5d-3df5-4c14-9b8c-b6d6824461b9" />
-

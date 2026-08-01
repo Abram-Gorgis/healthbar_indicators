@@ -37,11 +37,16 @@ import java.util.Map;
 import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
+import net.runelite.api.InventoryID;
+import net.runelite.api.Item;
+import net.runelite.api.ItemContainer;
+import net.runelite.api.ItemID;
 import net.runelite.api.Prayer;
 import net.runelite.api.Skill;
 import net.runelite.api.Varbits;
 import net.runelite.api.events.ChatMessage;
 import net.runelite.api.events.GameStateChanged;
+import net.runelite.api.events.GameTick;
 import net.runelite.api.events.StatChanged;
 import net.runelite.api.events.VarbitChanged;
 import net.runelite.client.callback.ClientThread;
@@ -80,6 +85,9 @@ public class HealthbarIndicatorsPluginUnitTest
 
 	@Mock
 	private ClientThread clientThread;
+
+	@Mock
+	private ItemContainer equipment;
 
 	private HealthbarIndicatorsPlugin plugin;
 
@@ -564,6 +572,80 @@ public class HealthbarIndicatorsPluginUnitTest
 		assertTrue("Non-game chat messages should be ignored", plugin.getFlashingEntries().isEmpty());
 	}
 
+	@Test
+	public void testThrallAndDeathChargeCanBeTrackedTogether()
+	{
+		setTrackedEntries(
+			entry(TrackedEffect.THRALL_ACTIVE, BlinkMode.ON_EXPIRE, 0, 20),
+			entry(TrackedEffect.DEATH_CHARGE, BlinkMode.ON_EXPIRE, 0, 20));
+
+		when(client.getVarbitValue(Varbits.RESURRECT_THRALL)).thenReturn(1);
+		when(client.getVarbitValue(Varbits.DEATH_CHARGE)).thenReturn(1);
+		plugin.onChatMessage(chatMessage("You resurrect a lesser ghostly thrall."));
+		plugin.onVarbitChanged(varbitChanged());
+		assertTrue(plugin.getFlashingEntries().isEmpty());
+
+		when(client.getVarbitValue(Varbits.RESURRECT_THRALL)).thenReturn(0);
+		when(client.getVarbitValue(Varbits.DEATH_CHARGE)).thenReturn(0);
+		plugin.onVarbitChanged(varbitChanged());
+		assertEquals("Both effects should expire independently", 2, plugin.getFlashingEntries().size());
+	}
+
+	@Test
+	public void testMarkOfDarknessFlashesAfterItsDuration()
+	{
+		setTrackedEntries(entry(TrackedEffect.MARK_OF_DARKNESS, BlinkMode.ON_EXPIRE, 0, 20));
+		when(client.getRealSkillLevel(Skill.MAGIC)).thenReturn(99);
+		when(client.getTickCount()).thenReturn(100);
+
+		plugin.onChatMessage(chatMessage("<col=ef1020>You have placed a Mark of Darkness upon yourself.</col>"));
+		assertTrue(plugin.getFlashingEntries().isEmpty());
+
+		when(client.getTickCount()).thenReturn(396);
+		plugin.onGameTick(new GameTick());
+		assertTrue("Mark should remain active before its expiration tick", plugin.getFlashingEntries().isEmpty());
+
+		when(client.getTickCount()).thenReturn(397);
+		plugin.onGameTick(new GameTick());
+		assertEquals(1, plugin.getFlashingEntries().size());
+	}
+
+	@Test
+	public void testPurgingStaffExtendsMarkOfDarknessDuration()
+	{
+		setTrackedEntries(entry(TrackedEffect.MARK_OF_DARKNESS, BlinkMode.ON_EXPIRE, 0, 20));
+		when(client.getRealSkillLevel(Skill.MAGIC)).thenReturn(99);
+		when(client.getItemContainer(InventoryID.EQUIPMENT)).thenReturn(equipment);
+		when(equipment.getItem(anyInt())).thenReturn(new Item(ItemID.PURGING_STAFF, 1));
+		when(client.getTickCount()).thenReturn(100);
+
+		plugin.onChatMessage(chatMessage("You have placed a Mark of Darkness upon yourself."));
+
+		when(client.getTickCount()).thenReturn(397);
+		plugin.onGameTick(new GameTick());
+		assertTrue("Purging staff should extend Mark beyond its normal duration",
+			plugin.getFlashingEntries().isEmpty());
+
+		when(client.getTickCount()).thenReturn(1585);
+		plugin.onGameTick(new GameTick());
+		assertEquals(1, plugin.getFlashingEntries().size());
+	}
+
+	@Test
+	public void testWardOfArceuusFlashesAfterItsDuration()
+	{
+		setTrackedEntries(entry(TrackedEffect.WARD_OF_ARCEUUS, BlinkMode.ON_EXPIRE, 0, 20));
+		when(client.getRealSkillLevel(Skill.MAGIC)).thenReturn(99);
+		when(client.getTickCount()).thenReturn(100);
+
+		plugin.onChatMessage(chatMessage("Your defence against Arceuus magic has been strengthened."));
+		assertTrue(plugin.getFlashingEntries().isEmpty());
+
+		when(client.getTickCount()).thenReturn(199);
+		plugin.onGameTick(new GameTick());
+		assertEquals(1, plugin.getFlashingEntries().size());
+	}
+
 	// =====================================================
 	// Game State Reset Tests
 	// =====================================================
@@ -935,6 +1017,21 @@ public class HealthbarIndicatorsPluginUnitTest
 
 		assertEquals("Should flash when prayer regen expires", 1, plugin.getFlashingEntries().size());
 		assertEquals(TrackedEffect.PRAYER_REGENERATION.name(), plugin.getFlashingEntries().get(0).getEffectName());
+	}
+
+	@Test
+	public void testSaturatedHeartTracking()
+	{
+		setTrackedEntries(entry(TrackedEffect.SATURATED_HEART, BlinkMode.ON_EXPIRE, 0, 20));
+
+		when(client.getVarbitValue(Varbits.IMBUED_HEART_COOLDOWN)).thenReturn(1);
+		plugin.onVarbitChanged(varbitChanged());
+		assertTrue(plugin.getFlashingEntries().isEmpty());
+
+		when(client.getVarbitValue(Varbits.IMBUED_HEART_COOLDOWN)).thenReturn(0);
+		plugin.onVarbitChanged(varbitChanged());
+		assertEquals("Saturated heart should flash when its effect expires", 1,
+			plugin.getFlashingEntries().size());
 	}
 
 	// =====================================================

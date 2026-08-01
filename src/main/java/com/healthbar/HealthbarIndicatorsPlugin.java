@@ -32,6 +32,8 @@ import com.healthbar.model.EffectDetectionType;
 import com.healthbar.model.EffectTracker;
 import com.healthbar.model.TrackedEffect;
 import com.healthbar.model.TrackedEffectEntry;
+import com.healthbar.timing.TimedChatEffectRegistry;
+import com.healthbar.timing.TimedChatEffectRegistry.TimedChatEffect;
 import com.healthbar.ui.HealthbarIndicatorsOverlay;
 import com.healthbar.ui.HealthbarIndicatorsPanel;
 import java.awt.image.BufferedImage;
@@ -41,6 +43,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import javax.inject.Inject;
@@ -53,6 +56,7 @@ import net.runelite.api.SpriteID;
 import net.runelite.api.gameval.VarPlayerID;
 import net.runelite.api.events.ChatMessage;
 import net.runelite.api.events.GameStateChanged;
+import net.runelite.api.events.GameTick;
 import net.runelite.api.events.StatChanged;
 import net.runelite.api.events.VarbitChanged;
 import net.runelite.client.callback.ClientThread;
@@ -67,6 +71,7 @@ import net.runelite.client.ui.ClientToolbar;
 import net.runelite.client.ui.NavigationButton;
 import net.runelite.client.ui.overlay.OverlayManager;
 import net.runelite.client.util.ImageUtil;
+import net.runelite.client.util.Text;
 
 @Slf4j
 @PluginDescriptor(
@@ -250,6 +255,10 @@ public class HealthbarIndicatorsPlugin extends Plugin
 				updateDivineStateIfTracked(effect);
 				continue;
 			}
+			if (effect.getDetectionType() == EffectDetectionType.TIMED_CHAT_MESSAGE)
+			{
+				continue;
+			}
 
 			boolean active = isEffectCurrentlyActive(effect);
 			EffectTracker tracker = getOrCreateTracker(effect);
@@ -278,21 +287,55 @@ public class HealthbarIndicatorsPlugin extends Plugin
 			return;
 		}
 
-		String message = event.getMessage().toLowerCase();
+		String message = Text.removeTags(event.getMessage()).toLowerCase(Locale.ROOT);
 		long now = System.currentTimeMillis();
 
 		for (TrackedEffectEntry entry : getTrackedEntries())
 		{
 			TrackedEffect effect = entry.getEffect();
-			if (effect == null || effect.getDetectionType() != EffectDetectionType.CHAT_MESSAGE)
+			if (effect == null)
 			{
 				continue;
 			}
 
-			if (message.contains(effect.getChatPattern()))
+			if (effect.getDetectionType() == EffectDetectionType.TIMED_CHAT_MESSAGE)
+			{
+				TimedChatEffect definition = TimedChatEffectRegistry.get(effect);
+				if (definition != null && definition.matches(message))
+				{
+					int durationTicks = definition.calculateDurationTicks(client);
+					if (durationTicks > 0)
+					{
+						getOrCreateTracker(effect).activateUntilTick(
+							now, client.getTickCount() + durationTicks);
+					}
+				}
+			}
+			else if (effect.getDetectionType() == EffectDetectionType.CHAT_MESSAGE
+				&& message.contains(effect.getChatPattern()))
 			{
 				chatActivatedEffects.add(effect);
 				getOrCreateTracker(effect).activate(now);
+			}
+		}
+	}
+
+	@Subscribe
+	public void onGameTick(GameTick event)
+	{
+		int currentTick = client.getTickCount();
+		long now = System.currentTimeMillis();
+		for (TrackedEffectEntry entry : getTrackedEntries())
+		{
+			TrackedEffect effect = entry.getEffect();
+			if (effect == null || effect.getDetectionType() != EffectDetectionType.TIMED_CHAT_MESSAGE)
+			{
+				continue;
+			}
+			EffectTracker tracker = trackers.get(effect);
+			if (tracker != null)
+			{
+				tracker.expireIfDue(currentTick, now);
 			}
 		}
 	}
