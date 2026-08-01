@@ -25,9 +25,11 @@
 package com.healthbar.model;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
+import net.runelite.api.SpriteID;
 import org.junit.Test;
 
 public class TrackedEffectEntryTest
@@ -77,5 +79,12 @@ public class TrackedEffectEntryTest
 		assertNull(entry.getBlinkMode());
 		assertEquals(0, entry.getDropThreshold());
 		assertEquals(0, entry.getTimeoutMinutes());
+	}
+
+	@Test
+	public void testMagicImbueUsesSpellSprite()
+	{
+		assertEquals(SpriteID.SPELL_MAGIC_IMBUE, TrackedEffect.MAGIC_IMBUE.getDefaultSpriteId());
+		assertFalse(TrackedEffect.MAGIC_IMBUE.isItemSprite());
 	}
 }

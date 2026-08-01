@@ -973,4 +973,19 @@ public class HealthbarIndicatorsPluginUnitTest
 		plugin.onVarbitChanged(varbitChanged());
 		assertTrue("Should stop when teleblock ends", plugin.getFlashingEntries().isEmpty());
 	}
+
+	@Test
+	public void testDisplayOptionDefaults()
+	{
+		HealthbarIndicatorsConfig defaultConfig = new HealthbarIndicatorsConfig()
+		{
+			@Override
+			public void setTrackedEffects(String json)
+			{
+			}
+		};
+
+		assertTrue("Blinking should remain enabled by default", defaultConfig.blinkIcons());
+		assertFalse("Inverted zoom scaling should be disabled by default", defaultConfig.invertZoomScaling());
+	}
 }
