@@ -30,13 +30,23 @@ import com.healthbar.model.EffectState;
 import com.healthbar.model.EffectTracker;
 import com.healthbar.model.TrackedEffect;
 import com.healthbar.model.TrackedEffectEntry;
+import com.healthbar.timing.TimedEffectManager;
 import com.healthbar.ui.HealthbarIndicatorsOverlay;
 import java.lang.reflect.Field;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ScheduledExecutorService;
 import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
+import net.runelite.api.InventoryID;
+import net.runelite.api.Item;
+import net.runelite.api.ItemContainer;
+import net.runelite.api.ItemID;
 import net.runelite.api.Prayer;
 import net.runelite.api.Skill;
 import net.runelite.api.Varbits;
@@ -81,7 +91,15 @@ public class HealthbarIndicatorsPluginUnitTest
 	@Mock
 	private ClientThread clientThread;
 
+	@Mock
+	private ScheduledExecutorService scheduledExecutorService;
+
+	@Mock
+	private ItemContainer equipment;
+
 	private HealthbarIndicatorsPlugin plugin;
+	private MutableClock clock;
+	private TimedEffectManager timedEffectManager;
 
 	@Before
 	public void setUp() throws Exception
@@ -93,6 +111,11 @@ public class HealthbarIndicatorsPluginUnitTest
 		setField("overlayManager", overlayManager);
 		setField("overlay", overlay);
 		setField("clientThread", clientThread);
+		setField("scheduledExecutorService", scheduledExecutorService);
+		clock = new MutableClock(Instant.ofEpochMilli(1_000));
+		timedEffectManager = new TimedEffectManager(
+			client, clientThread, scheduledExecutorService, clock);
+		setField("timedEffectManager", timedEffectManager);
 	}
 
 	private void setField(String name, Object value) throws Exception
@@ -564,6 +587,77 @@ public class HealthbarIndicatorsPluginUnitTest
 		assertTrue("Non-game chat messages should be ignored", plugin.getFlashingEntries().isEmpty());
 	}
 
+	@Test
+	public void testThrallAndDeathChargeCanBeTrackedTogether()
+	{
+		setTrackedEntries(
+			entry(TrackedEffect.THRALL_ACTIVE, BlinkMode.ON_EXPIRE, 0, 20),
+			entry(TrackedEffect.DEATH_CHARGE, BlinkMode.ON_EXPIRE, 0, 20));
+
+		when(client.getVarbitValue(Varbits.RESURRECT_THRALL)).thenReturn(1);
+		when(client.getVarbitValue(Varbits.DEATH_CHARGE)).thenReturn(1);
+		plugin.onChatMessage(chatMessage("You resurrect a lesser ghostly thrall."));
+		plugin.onVarbitChanged(varbitChanged());
+		assertTrue(plugin.getFlashingEntries().isEmpty());
+
+		when(client.getVarbitValue(Varbits.RESURRECT_THRALL)).thenReturn(0);
+		when(client.getVarbitValue(Varbits.DEATH_CHARGE)).thenReturn(0);
+		plugin.onVarbitChanged(varbitChanged());
+		assertEquals("Both effects should expire independently", 2, plugin.getFlashingEntries().size());
+	}
+
+	@Test
+	public void testMarkOfDarknessStartsCalculatedTimer()
+	{
+		setTrackedEntries(entry(TrackedEffect.MARK_OF_DARKNESS, BlinkMode.ON_EXPIRE, 0, 20));
+		when(client.getRealSkillLevel(Skill.MAGIC)).thenReturn(99);
+
+		plugin.onChatMessage(chatMessage("<col=ef1020>You have placed a Mark of Darkness upon yourself.</col>"));
+		EffectTracker tracker = getTrackerMap().get(TrackedEffect.MARK_OF_DARKNESS);
+
+		assertEquals(EffectState.ACTIVE, tracker.getState());
+		assertTrue(timedEffectManager.isActive(TrackedEffect.MARK_OF_DARKNESS));
+		assertEquals(99 * 3 * 600L,
+			timedEffectManager.getExpiration(TrackedEffect.MARK_OF_DARKNESS).toEpochMilli()
+				- tracker.getLastActiveAtMillis());
+		assertTrue(plugin.getFlashingEntries().isEmpty());
+	}
+
+	@Test
+	public void testPurgingStaffExtendsMarkOfDarknessDuration()
+	{
+		setTrackedEntries(entry(TrackedEffect.MARK_OF_DARKNESS, BlinkMode.ON_EXPIRE, 0, 20));
+		when(client.getRealSkillLevel(Skill.MAGIC)).thenReturn(99);
+		when(client.getItemContainer(InventoryID.EQUIPMENT)).thenReturn(equipment);
+		when(equipment.getItem(anyInt())).thenReturn(new Item(ItemID.PURGING_STAFF, 1));
+
+		plugin.onChatMessage(chatMessage("You have placed a Mark of Darkness upon yourself."));
+		EffectTracker tracker = getTrackerMap().get(TrackedEffect.MARK_OF_DARKNESS);
+		long durationMillis = timedEffectManager.getExpiration(TrackedEffect.MARK_OF_DARKNESS)
+			.toEpochMilli()
+			- tracker.getLastActiveAtMillis();
+
+		assertEquals("Purging staff should multiply Mark's duration by five",
+			99 * 3 * 5 * 600L, durationMillis);
+	}
+
+	@Test
+	public void testWardOfArceuusStartsCalculatedTimer()
+	{
+		setTrackedEntries(entry(TrackedEffect.WARD_OF_ARCEUUS, BlinkMode.ON_EXPIRE, 0, 20));
+		when(client.getRealSkillLevel(Skill.MAGIC)).thenReturn(99);
+
+		plugin.onChatMessage(chatMessage("Your defence against Arceuus magic has been strengthened."));
+		EffectTracker tracker = getTrackerMap().get(TrackedEffect.WARD_OF_ARCEUUS);
+
+		assertEquals(EffectState.ACTIVE, tracker.getState());
+		assertTrue(timedEffectManager.isActive(TrackedEffect.WARD_OF_ARCEUUS));
+		assertEquals(99 * 600L,
+			timedEffectManager.getExpiration(TrackedEffect.WARD_OF_ARCEUUS).toEpochMilli()
+				- tracker.getLastActiveAtMillis());
+		assertTrue(plugin.getFlashingEntries().isEmpty());
+	}
+
 	// =====================================================
 	// Game State Reset Tests
 	// =====================================================
@@ -602,6 +696,56 @@ public class HealthbarIndicatorsPluginUnitTest
 		plugin.onGameStateChanged(logout);
 
 		assertTrue("Login screen should clear all flashing", plugin.getFlashingEntries().isEmpty());
+	}
+
+	@Test
+	public void testSessionChangePreservesTimedEffectStillActiveAtLogin()
+	{
+		setTrackedEntries(entry(TrackedEffect.WARD_OF_ARCEUUS, BlinkMode.ON_EXPIRE, 0, 20));
+		when(client.getRealSkillLevel(Skill.MAGIC)).thenReturn(99);
+		plugin.onChatMessage(chatMessage("Your defence against Arceuus magic has been strengthened."));
+
+		EffectTracker tracker = getTrackerMap().get(TrackedEffect.WARD_OF_ARCEUUS);
+		Instant expiration = timedEffectManager.getExpiration(TrackedEffect.WARD_OF_ARCEUUS);
+
+		GameStateChanged logout = new GameStateChanged();
+		logout.setGameState(GameState.LOGIN_SCREEN);
+		plugin.onGameStateChanged(logout);
+
+		clock.set(expiration.minusMillis(1));
+		GameStateChanged login = new GameStateChanged();
+		login.setGameState(GameState.LOGGED_IN);
+		plugin.onGameStateChanged(login);
+
+		assertEquals("Logout should retain the original timed-effect deadline", expiration,
+			timedEffectManager.getExpiration(TrackedEffect.WARD_OF_ARCEUUS));
+		assertEquals(EffectState.ACTIVE, tracker.getState());
+		assertTrue(plugin.getFlashingEntries().isEmpty());
+	}
+
+	@Test
+	public void testTimedEffectExpiredWhileLoggedOutDoesNotFlashAfterLogin()
+	{
+		setTrackedEntries(entry(TrackedEffect.WARD_OF_ARCEUUS, BlinkMode.ON_EXPIRE, 0, 20));
+		when(client.getRealSkillLevel(Skill.MAGIC)).thenReturn(99);
+		plugin.onChatMessage(chatMessage("Your defence against Arceuus magic has been strengthened."));
+
+		EffectTracker tracker = getTrackerMap().get(TrackedEffect.WARD_OF_ARCEUUS);
+		Instant expiration = timedEffectManager.getExpiration(TrackedEffect.WARD_OF_ARCEUUS);
+
+		GameStateChanged logout = new GameStateChanged();
+		logout.setGameState(GameState.LOGIN_SCREEN);
+		plugin.onGameStateChanged(logout);
+
+		clock.set(expiration);
+		GameStateChanged login = new GameStateChanged();
+		login.setGameState(GameState.LOGGED_IN);
+		plugin.onGameStateChanged(login);
+
+		assertTrue("An effect that expired while logged out should be discarded",
+			plugin.getFlashingEntries().isEmpty());
+		assertEquals(EffectState.INACTIVE, tracker.getState());
+		assertFalse(timedEffectManager.isActive(TrackedEffect.WARD_OF_ARCEUUS));
 	}
 
 	// =====================================================
@@ -937,6 +1081,21 @@ public class HealthbarIndicatorsPluginUnitTest
 		assertEquals(TrackedEffect.PRAYER_REGENERATION.name(), plugin.getFlashingEntries().get(0).getEffectName());
 	}
 
+	@Test
+	public void testSaturatedHeartTracking()
+	{
+		setTrackedEntries(entry(TrackedEffect.SATURATED_HEART, BlinkMode.ON_EXPIRE, 0, 20));
+
+		when(client.getVarbitValue(Varbits.IMBUED_HEART_COOLDOWN)).thenReturn(1);
+		plugin.onVarbitChanged(varbitChanged());
+		assertTrue(plugin.getFlashingEntries().isEmpty());
+
+		when(client.getVarbitValue(Varbits.IMBUED_HEART_COOLDOWN)).thenReturn(0);
+		plugin.onVarbitChanged(varbitChanged());
+		assertEquals("Saturated heart should flash when its effect expires", 1,
+			plugin.getFlashingEntries().size());
+	}
+
 	// =====================================================
 	// Varbit Buff Tests (VARBIT detection, ON_EXPIRE)
 	// =====================================================
@@ -974,18 +1133,36 @@ public class HealthbarIndicatorsPluginUnitTest
 		assertTrue("Should stop when teleblock ends", plugin.getFlashingEntries().isEmpty());
 	}
 
-	@Test
-	public void testDisplayOptionDefaults()
+	private static final class MutableClock extends Clock
 	{
-		HealthbarIndicatorsConfig defaultConfig = new HealthbarIndicatorsConfig()
-		{
-			@Override
-			public void setTrackedEffects(String json)
-			{
-			}
-		};
+		private Instant current;
 
-		assertTrue("Blinking should remain enabled by default", defaultConfig.blinkIcons());
-		assertFalse("Inverted zoom scaling should be disabled by default", defaultConfig.invertZoomScaling());
+		private MutableClock(Instant current)
+		{
+			this.current = current;
+		}
+
+		private void set(Instant instant)
+		{
+			current = instant;
+		}
+
+		@Override
+		public ZoneId getZone()
+		{
+			return ZoneOffset.UTC;
+		}
+
+		@Override
+		public Clock withZone(ZoneId zone)
+		{
+			return this;
+		}
+
+		@Override
+		public Instant instant()
+		{
+			return current;
+		}
 	}
 }

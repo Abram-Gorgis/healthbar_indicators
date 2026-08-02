@@ -148,6 +148,10 @@ public enum TrackedEffect
 		Varbits.IMBUED_HEART_COOLDOWN,
 		ItemID.IMBUED_HEART, true, BlinkMode.ON_EXPIRE, "Buffs"),
 
+	SATURATED_HEART("Saturated Heart", EffectDetectionType.VARBIT,
+		Varbits.IMBUED_HEART_COOLDOWN,
+		ItemID.SATURATED_HEART, true, BlinkMode.ON_EXPIRE, "Buffs"),
+
 	MAGIC_IMBUE("Magic Imbue", EffectDetectionType.VARBIT,
 		Varbits.MAGIC_IMBUE,
 		SpriteID.SPELL_MAGIC_IMBUE, false, BlinkMode.ON_EXPIRE, "Buffs"),
@@ -194,6 +198,14 @@ public enum TrackedEffect
 	DEATH_CHARGE("Death Charge", EffectDetectionType.VARBIT,
 		Varbits.DEATH_CHARGE,
 		SpriteID.SPELL_DEATH_CHARGE, false, BlinkMode.ON_EXPIRE, "Buffs"),
+
+	MARK_OF_DARKNESS("Mark of Darkness", EffectDetectionType.TIMED_CHAT_MESSAGE,
+		null,
+		SpriteID.SPELL_MARK_OF_DARKNESS, false, BlinkMode.ON_EXPIRE, "Buffs"),
+
+	WARD_OF_ARCEUUS("Ward of Arceuus", EffectDetectionType.TIMED_CHAT_MESSAGE,
+		null,
+		SpriteID.SPELL_WARD_OF_ARCEUUS, false, BlinkMode.ON_EXPIRE, "Buffs"),
 
 	THRALL_ACTIVE("Thrall Active", EffectDetectionType.CHAT_MESSAGE,
 		"resurrect a",

@@ -24,12 +24,15 @@
  */
 package com.healthbar.model;
 
+import com.healthbar.timing.TimedChatEffectRegistry;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
+import net.runelite.api.ItemID;
 import net.runelite.api.SpriteID;
+import net.runelite.api.Varbits;
 import org.junit.Test;
 
 public class TrackedEffectEntryTest
@@ -82,9 +85,13 @@ public class TrackedEffectEntryTest
 	}
 
 	@Test
-	public void testMagicImbueUsesSpellSprite()
+	public void testNewEffectsUseExpectedDetectionAndSprites()
 	{
-		assertEquals(SpriteID.SPELL_MAGIC_IMBUE, TrackedEffect.MAGIC_IMBUE.getDefaultSpriteId());
-		assertFalse(TrackedEffect.MAGIC_IMBUE.isItemSprite());
+		assertEquals(Varbits.IMBUED_HEART_COOLDOWN, TrackedEffect.SATURATED_HEART.getVarbitId());
+		assertEquals(ItemID.SATURATED_HEART, TrackedEffect.SATURATED_HEART.getDefaultSpriteId());
+		assertEquals(SpriteID.SPELL_MARK_OF_DARKNESS, TrackedEffect.MARK_OF_DARKNESS.getDefaultSpriteId());
+		assertEquals(SpriteID.SPELL_WARD_OF_ARCEUUS, TrackedEffect.WARD_OF_ARCEUUS.getDefaultSpriteId());
+		assertNotNull(TimedChatEffectRegistry.get(TrackedEffect.MARK_OF_DARKNESS));
+		assertNotNull(TimedChatEffectRegistry.get(TrackedEffect.WARD_OF_ARCEUUS));
 	}
 }

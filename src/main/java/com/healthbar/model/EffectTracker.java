@@ -88,6 +88,7 @@ public class EffectTracker
 	{
 		state = EffectState.ACTIVE;
 		lastActiveAtMillis = now;
+		expiredAtMillis = 0;
 	}
 
 	/**
