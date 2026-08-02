@@ -102,8 +102,8 @@ public class TimedEffectManagerTest
 	@Test
 	public void testActivationSchedulesAndExpiresOnClientThread()
 	{
-		Instant expiration = manager.activate(
-			TrackedEffect.WARD_OF_ARCEUUS, Duration.ofSeconds(5), tracker);
+		manager.activate(TrackedEffect.WARD_OF_ARCEUUS, Duration.ofSeconds(5), tracker);
+		Instant expiration = manager.getExpiration(TrackedEffect.WARD_OF_ARCEUUS);
 
 		assertEquals(Instant.ofEpochMilli(6_000), expiration);
 		assertEquals(5_000, scheduledCalls.get(0).delayMillis);
@@ -128,8 +128,8 @@ public class TimedEffectManagerTest
 		ScheduledFuture<?> firstFuture = scheduledCalls.get(0).future;
 
 		clock.advance(Duration.ofSeconds(2));
-		Instant secondExpiration = manager.activate(
-			TrackedEffect.MARK_OF_DARKNESS, Duration.ofSeconds(5), tracker);
+		manager.activate(TrackedEffect.MARK_OF_DARKNESS, Duration.ofSeconds(5), tracker);
+		Instant secondExpiration = manager.getExpiration(TrackedEffect.MARK_OF_DARKNESS);
 		assertEquals(Instant.ofEpochMilli(8_000), secondExpiration);
 		verify(firstFuture).cancel(false);
 
@@ -260,6 +260,16 @@ public class TimedEffectManagerTest
 
 		assertFalse(manager.isSuspended());
 		assertFalse(manager.isActive(TrackedEffect.WARD_OF_ARCEUUS));
+	}
+
+	@Test
+	public void testInvalidDurationIsLoggedAndIgnored()
+	{
+		manager.activate(TrackedEffect.WARD_OF_ARCEUUS, Duration.ZERO, tracker);
+
+		assertEquals(EffectState.INACTIVE, tracker.getState());
+		assertFalse(manager.isActive(TrackedEffect.WARD_OF_ARCEUUS));
+		assertTrue(scheduledCalls.isEmpty());
 	}
 
 	private void fireScheduledCall(int index)

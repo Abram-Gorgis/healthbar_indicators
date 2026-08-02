@@ -36,6 +36,7 @@ import java.util.Set;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
 import net.runelite.client.callback.ClientThread;
@@ -44,6 +45,7 @@ import net.runelite.client.callback.ClientThread;
  * Owns the runtime lifecycle of chat-activated effects with calculated durations.
  * All tracker transitions happen on the RuneLite client thread.
  */
+@Slf4j
 public final class TimedEffectManager
 {
 	private final Client client;
@@ -74,11 +76,12 @@ public final class TimedEffectManager
 	/**
 	 * Starts or replaces a timed effect. Recasting always creates a new deadline.
 	 */
-	public Instant activate(TrackedEffect effect, Duration duration, EffectTracker tracker)
+	public void activate(TrackedEffect effect, Duration duration, EffectTracker tracker)
 	{
-		if (duration.isZero() || duration.isNegative())
+		if (duration == null || duration.isZero() || duration.isNegative())
 		{
-			throw new IllegalArgumentException("Timed effect duration must be positive");
+			log.warn("Ignoring timed effect {} with invalid duration {}", effect, duration);
+			return;
 		}
 
 		remove(effect);
@@ -93,7 +96,6 @@ public final class TimedEffectManager
 		{
 			schedule(activeEffect);
 		}
-		return expiresAt;
 	}
 
 	/**

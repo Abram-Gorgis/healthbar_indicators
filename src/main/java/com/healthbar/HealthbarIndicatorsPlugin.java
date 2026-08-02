@@ -316,11 +316,8 @@ public class HealthbarIndicatorsPlugin extends Plugin
 				if (definition != null && definition.matches(message))
 				{
 					Duration duration = definition.calculateDuration(client);
-					if (!duration.isZero() && !duration.isNegative())
-					{
-						getTimedEffectManager().activate(
-							effect, duration, getOrCreateTracker(effect));
-					}
+					getTimedEffectManager().activate(
+						effect, duration, getOrCreateTracker(effect));
 				}
 			}
 			else if (effect.getDetectionType() == EffectDetectionType.CHAT_MESSAGE
