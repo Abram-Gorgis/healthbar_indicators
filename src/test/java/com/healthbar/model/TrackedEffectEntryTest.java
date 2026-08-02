@@ -30,7 +30,9 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
 import net.runelite.api.ItemID;
+import net.runelite.api.Skill;
 import net.runelite.api.SpriteID;
 import net.runelite.api.Varbits;
 import org.junit.Test;
@@ -93,5 +95,21 @@ public class TrackedEffectEntryTest
 		assertEquals(SpriteID.SPELL_WARD_OF_ARCEUUS, TrackedEffect.WARD_OF_ARCEUUS.getDefaultSpriteId());
 		assertNotNull(TimedChatEffectRegistry.get(TrackedEffect.MARK_OF_DARKNESS));
 		assertNotNull(TimedChatEffectRegistry.get(TrackedEffect.WARD_OF_ARCEUUS));
+	}
+
+	@Test
+	public void testHunterBoostsUseExpectedSkillsAndSprites()
+	{
+		assertEquals(EffectDetectionType.SKILL_BOOST, TrackedEffect.RUBY_HARVEST.getDetectionType());
+		assertEquals(ItemID.RUBY_HARVEST, TrackedEffect.RUBY_HARVEST.getDefaultSpriteId());
+		assertTrue(TrackedEffect.RUBY_HARVEST.tracksSkill(Skill.ATTACK));
+
+		assertEquals(EffectDetectionType.SKILL_BOOST, TrackedEffect.SAPPHIRE_GLACIALIS.getDetectionType());
+		assertEquals(ItemID.SAPPHIRE_GLACIALIS, TrackedEffect.SAPPHIRE_GLACIALIS.getDefaultSpriteId());
+		assertTrue(TrackedEffect.SAPPHIRE_GLACIALIS.tracksSkill(Skill.DEFENCE));
+
+		assertEquals(EffectDetectionType.SKILL_BOOST, TrackedEffect.BLACK_WARLOCK.getDetectionType());
+		assertEquals(ItemID.BLACK_WARLOCK, TrackedEffect.BLACK_WARLOCK.getDefaultSpriteId());
+		assertTrue(TrackedEffect.BLACK_WARLOCK.tracksSkill(Skill.STRENGTH));
 	}
 }
