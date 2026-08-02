@@ -90,7 +90,7 @@ public class HealthbarIndicatorsOverlay extends Overlay
 			return null;
 		}
 
-		if (!isBlinkOn())
+		if (config.blinkIcons() && !isBlinkOn())
 		{
 			return null;
 		}

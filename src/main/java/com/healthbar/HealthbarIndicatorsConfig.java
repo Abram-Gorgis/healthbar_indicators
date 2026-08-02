@@ -49,10 +49,21 @@ public interface HealthbarIndicatorsConfig extends Config
 	}
 
 	@ConfigItem(
+		keyName = "blinkIcons",
+		name = "Blink Icons",
+		description = "When disabled, active indicators stay continuously visible",
+		position = 1
+	)
+	default boolean blinkIcons()
+	{
+		return true;
+	}
+
+	@ConfigItem(
 		keyName = "iconSize",
 		name = "Icon Size",
 		description = "Size of indicator icons in pixels",
-		position = 1
+		position = 2
 	)
 	default int iconSize()
 	{
@@ -64,7 +75,7 @@ public interface HealthbarIndicatorsConfig extends Config
 		keyName = "zoomDamping",
 		name = "Zoom Sensitivity %",
 		description = "How much icons scale with zoom (0 = no scaling, 100 = full scaling)",
-		position = 2
+		position = 3
 	)
 	default int zoomDamping()
 	{
@@ -74,12 +85,12 @@ public interface HealthbarIndicatorsConfig extends Config
 	@ConfigItem(
 		keyName = "invertZoomScaling",
 		name = "Invert Zoom Scaling",
-		description = "When enabled, icons grow when zooming out (like the healthbar). When disabled, icons shrink when zooming out.",
-		position = 3
+		description = "When enabled, icons grow when zooming out (like the healthbar). Warning: moving the camera while indicators are visible can make icons grow choppily.",
+		position = 4
 	)
 	default boolean invertZoomScaling()
 	{
-		return true;
+		return false;
 	}
 
 	@Range(min = -500, max = 500)
@@ -87,7 +98,7 @@ public interface HealthbarIndicatorsConfig extends Config
 		keyName = "offsetX",
 		name = "X Offset",
 		description = "Horizontal offset in pixels (negative = left, positive = right)",
-		position = 4
+		position = 5
 	)
 	default int offsetX()
 	{
@@ -99,7 +110,7 @@ public interface HealthbarIndicatorsConfig extends Config
 		keyName = "offsetY",
 		name = "Y Offset",
 		description = "Vertical offset in pixels (negative = down, positive = up)",
-		position = 5
+		position = 6
 	)
 	default int offsetY()
 	{
