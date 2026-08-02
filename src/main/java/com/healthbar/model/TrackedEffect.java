@@ -154,7 +154,7 @@ public enum TrackedEffect
 
 	MAGIC_IMBUE("Magic Imbue", EffectDetectionType.VARBIT,
 		Varbits.MAGIC_IMBUE,
-		ItemID.MAGIC_POTION4, true, BlinkMode.ON_EXPIRE, "Buffs"),
+		SpriteID.SPELL_MAGIC_IMBUE, false, BlinkMode.ON_EXPIRE, "Buffs"),
 
 	VENGEANCE("Vengeance", EffectDetectionType.VARBIT,
 		Varbits.VENGEANCE_ACTIVE,
