@@ -24,7 +24,6 @@
  */
 package com.healthbar.model;
 
-import com.healthbar.timing.TimedEffectTimer;
 import lombok.Getter;
 
 @Getter
@@ -39,7 +38,6 @@ public class EffectTracker
 	private boolean divineWasActive = false;
 	private int lastKnownBoost = UNINITIALIZED_BOOST;
 	private boolean drinkDetected = false;
-	private TimedEffectTimer timedEffectTimer;
 
 	/**
 	 * Records that a divine potion variant was seen active.
@@ -90,28 +88,7 @@ public class EffectTracker
 	{
 		state = EffectState.ACTIVE;
 		lastActiveAtMillis = now;
-		timedEffectTimer = null;
-	}
-
-	public void activateForDuration(long now, long durationMillis)
-	{
-		state = EffectState.ACTIVE;
-		lastActiveAtMillis = now;
 		expiredAtMillis = 0;
-		timedEffectTimer = new TimedEffectTimer(now, durationMillis);
-	}
-
-	/**
-	 * Expires a timed effect once its internal countdown has finished.
-	 */
-	public boolean expireIfTimerFinished(long now)
-	{
-		if (timedEffectTimer != null && timedEffectTimer.isFinished(now))
-		{
-			timedEffectTimer = null;
-			return tryExpire(now);
-		}
-		return false;
 	}
 
 	/**
@@ -279,6 +256,5 @@ public class EffectTracker
 		this.divineWasActive = false;
 		this.lastKnownBoost = UNINITIALIZED_BOOST;
 		this.drinkDetected = false;
-		this.timedEffectTimer = null;
 	}
 }

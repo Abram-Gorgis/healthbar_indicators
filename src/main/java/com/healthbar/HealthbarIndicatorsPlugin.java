@@ -34,10 +34,12 @@ import com.healthbar.model.TrackedEffect;
 import com.healthbar.model.TrackedEffectEntry;
 import com.healthbar.timing.TimedChatEffectRegistry;
 import com.healthbar.timing.TimedChatEffectRegistry.TimedChatEffect;
+import com.healthbar.timing.TimedEffectManager;
 import com.healthbar.ui.HealthbarIndicatorsOverlay;
 import com.healthbar.ui.HealthbarIndicatorsPanel;
 import java.awt.image.BufferedImage;
 import java.lang.reflect.Type;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -46,6 +48,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ScheduledExecutorService;
 import javax.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.ChatMessageType;
@@ -83,7 +86,6 @@ public class HealthbarIndicatorsPlugin extends Plugin
 	private static final Type ENTRY_LIST_TYPE = new TypeToken<List<TrackedEffectEntry>>(){}.getType();
 	private static final int NAV_ICON_SIZE = 16;
 	private static final int VENOM_IMMUNITY_THRESHOLD = -38;
-	private static final long GAME_TICK_MILLIS = 600L;
 
 	@Inject
 	private Gson gson;
@@ -115,8 +117,12 @@ public class HealthbarIndicatorsPlugin extends Plugin
 	@Inject
 	private ClientThread clientThread;
 
+	@Inject
+	private ScheduledExecutorService scheduledExecutorService;
+
 	private HealthbarIndicatorsPanel panel;
 	private NavigationButton navButton;
+	private TimedEffectManager timedEffectManager;
 	private final Map<TrackedEffect, EffectTracker> trackers = new HashMap<>();
 	private final Set<TrackedEffect> chatActivatedEffects = new HashSet<>();
 	private final List<TrackedEffectEntry> flashingEntriesBuffer = new ArrayList<>();
@@ -125,6 +131,7 @@ public class HealthbarIndicatorsPlugin extends Plugin
 	@Override
 	protected void startUp()
 	{
+		getTimedEffectManager();
 		reloadTrackedEntries();
 		overlayManager.add(overlay);
 
@@ -150,6 +157,10 @@ public class HealthbarIndicatorsPlugin extends Plugin
 	@Override
 	protected void shutDown()
 	{
+		if (timedEffectManager != null)
+		{
+			timedEffectManager.clear();
+		}
 		overlayManager.remove(overlay);
 		if (navButton != null)
 		{
@@ -174,6 +185,7 @@ public class HealthbarIndicatorsPlugin extends Plugin
 	public void onGameStateChanged(GameStateChanged event)
 	{
 		GameState state = event.getGameState();
+		getTimedEffectManager().onGameStateChanged(state);
 		if (state == GameState.HOPPING || state == GameState.LOGIN_SCREEN)
 		{
 			resetTrackersForSessionChange();
@@ -303,11 +315,11 @@ public class HealthbarIndicatorsPlugin extends Plugin
 				TimedChatEffect definition = TimedChatEffectRegistry.get(effect);
 				if (definition != null && definition.matches(message))
 				{
-					int durationTicks = definition.calculateDurationTicks(client);
-					if (durationTicks > 0)
+					Duration duration = definition.calculateDuration(client);
+					if (!duration.isZero() && !duration.isNegative())
 					{
-						getOrCreateTracker(effect).activateForDuration(
-							now, durationTicks * GAME_TICK_MILLIS);
+						getTimedEffectManager().activate(
+							effect, duration, getOrCreateTracker(effect));
 					}
 				}
 			}
@@ -398,8 +410,6 @@ public class HealthbarIndicatorsPlugin extends Plugin
 				continue;
 			}
 
-			tracker.expireIfTimerFinished(now);
-
 			if (tracker.isTimedOut(entry.getTimeoutMinutes(), now))
 			{
 				tracker.reset();
@@ -453,6 +463,10 @@ public class HealthbarIndicatorsPlugin extends Plugin
 		}
 		trackers.keySet().retainAll(activeEffects);
 		chatActivatedEffects.retainAll(activeEffects);
+		if (timedEffectManager != null)
+		{
+			timedEffectManager.retainAll(activeEffects);
+		}
 	}
 
 	private List<TrackedEffectEntry> getTrackedEntries()
@@ -496,6 +510,10 @@ public class HealthbarIndicatorsPlugin extends Plugin
 
 	private void resetAllTrackers()
 	{
+		if (timedEffectManager != null)
+		{
+			timedEffectManager.clear();
+		}
 		for (EffectTracker tracker : trackers.values())
 		{
 			tracker.reset();
@@ -507,15 +525,24 @@ public class HealthbarIndicatorsPlugin extends Plugin
 	{
 		for (Map.Entry<TrackedEffect, EffectTracker> entry : trackers.entrySet())
 		{
-			boolean activeTimedEffect = entry.getKey().getDetectionType()
-				== EffectDetectionType.TIMED_CHAT_MESSAGE
-				&& entry.getValue().getTimedEffectTimer() != null;
+			boolean activeTimedEffect = timedEffectManager != null
+				&& timedEffectManager.isActive(entry.getKey());
 			if (!activeTimedEffect)
 			{
 				entry.getValue().reset();
 			}
 		}
 		chatActivatedEffects.clear();
+	}
+
+	private TimedEffectManager getTimedEffectManager()
+	{
+		if (timedEffectManager == null)
+		{
+			timedEffectManager = new TimedEffectManager(
+				client, clientThread, scheduledExecutorService);
+		}
+		return timedEffectManager;
 	}
 
 	@Provides

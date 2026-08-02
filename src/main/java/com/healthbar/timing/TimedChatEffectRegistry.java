@@ -25,6 +25,7 @@
 package com.healthbar.timing;
 
 import com.healthbar.model.TrackedEffect;
+import java.time.Duration;
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.Map;
@@ -35,6 +36,7 @@ import net.runelite.api.Item;
 import net.runelite.api.ItemContainer;
 import net.runelite.api.ItemID;
 import net.runelite.api.Skill;
+import net.runelite.client.util.RSTimeUnit;
 
 public final class TimedChatEffectRegistry
 {
@@ -68,7 +70,7 @@ public final class TimedChatEffectRegistry
 
 		boolean matches(String normalizedMessage);
 
-		int calculateDurationTicks(Client client);
+		Duration calculateDuration(Client client);
 	}
 
 	private static final class MarkOfDarknessEffect implements TimedChatEffect
@@ -88,15 +90,17 @@ public final class TimedChatEffectRegistry
 		}
 
 		@Override
-		public int calculateDurationTicks(Client client)
+		public Duration calculateDuration(Client client)
 		{
-			int durationTicks = client.getRealSkillLevel(Skill.MAGIC) * 3;
+			Duration duration = Duration.of(
+				(long) client.getRealSkillLevel(Skill.MAGIC) * 3,
+				RSTimeUnit.GAME_TICKS);
 			if (isWeaponEquipped(client, ItemID.PURGING_STAFF))
 			{
-				durationTicks *= 5;
+				duration = duration.multipliedBy(5);
 			}
-			return durationTicks;
-	}
+			return duration;
+		}
 	}
 
 	private static final class WardOfArceuusEffect implements TimedChatEffect
@@ -117,9 +121,9 @@ public final class TimedChatEffectRegistry
 		}
 
 		@Override
-		public int calculateDurationTicks(Client client)
+		public Duration calculateDuration(Client client)
 		{
-			return client.getRealSkillLevel(Skill.MAGIC);
+			return Duration.of(client.getRealSkillLevel(Skill.MAGIC), RSTimeUnit.GAME_TICKS);
 		}
 	}
 
