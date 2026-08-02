@@ -32,7 +32,7 @@ https://github.com/user-attachments/assets/a37d92ef-f13f-4fc3-a484-5879c3c72216
 ## Tracked Effects
 
 ### Potions
-Super Combat, Super Attack, Super Strength, Super Defence, Ranging, Magic, Attack, Strength, Defence, Combat, Bastion, Battlemage, Saradomin Brew, Prayer Regeneration, and all Divine variants
+Super Combat, Super Attack, Super Strength, Super Defence, Ranging, Magic, Attack, Strength, Defence, Combat, Bastion, Battlemage, Saradomin Brew, Ruby Harvest (+ Mix), Sapphire Glacialis (+ Mix), Black Warlock (+ Mix), Prayer Regeneration, and all Divine variants
 
 ### Buffs
 Stamina, Antifire, Super Antifire, Antipoison, Antivenom, Imbued Heart, Saturated Heart, Magic Imbue, Vengeance, Moonlight Potion, NMZ Absorption, Ring of Endurance, Shadow Veil, Death Charge, Mark of Darkness, Ward of Arceuus, Thrall Active, Thrall Cooldown

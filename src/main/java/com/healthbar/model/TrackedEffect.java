@@ -73,6 +73,18 @@ public enum TrackedEffect
 		new Skill[]{Skill.DEFENCE},
 		ItemID.DEFENCE_POTION4, true, BlinkMode.ON_EXPIRE, "Potions"),
 
+	RUBY_HARVEST("Ruby Harvest (+ Mix)", EffectDetectionType.SKILL_BOOST,
+		new Skill[]{Skill.ATTACK},
+		ItemID.RUBY_HARVEST, true, BlinkMode.ON_EXPIRE, "Potions"),
+
+	SAPPHIRE_GLACIALIS("Sapphire Glacialis (+ Mix)", EffectDetectionType.SKILL_BOOST,
+		new Skill[]{Skill.DEFENCE},
+		ItemID.SAPPHIRE_GLACIALIS, true, BlinkMode.ON_EXPIRE, "Potions"),
+
+	BLACK_WARLOCK("Black Warlock (+ Mix)", EffectDetectionType.SKILL_BOOST,
+		new Skill[]{Skill.STRENGTH},
+		ItemID.BLACK_WARLOCK, true, BlinkMode.ON_EXPIRE, "Potions"),
+
 	COMBAT_POTION("Combat Potion", EffectDetectionType.SKILL_BOOST,
 		new Skill[]{Skill.ATTACK, Skill.STRENGTH},
 		ItemID.COMBAT_POTION4, true, BlinkMode.ON_EXPIRE, "Potions"),
