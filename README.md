@@ -25,7 +25,7 @@ https://github.com/user-attachments/assets/a37d92ef-f13f-4fc3-a484-5879c3c72216
 | Flash Rate | How fast icons blink on/off (ms) | 500 |
 | Blink Icons | Blink triggered indicators instead of showing them continuously | On |
 | Icon Size | Base size of indicator icons (px) | 20 |
-| Zoom Sensitivity % | How much icons scale with zoom (0 = fixed, 100 = full) | 50 |
+| Zoom Sensitivity % | How much icons scale with zoom (0 = fixed, 100 = full) | 0 |
 | Invert Zoom Scaling | Icons grow when zooming out (like the healthbar) | Off |
 | X/Y Offset | Fine-tune icon position | 0 |
 

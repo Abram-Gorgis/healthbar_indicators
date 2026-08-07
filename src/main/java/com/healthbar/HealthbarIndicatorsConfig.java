@@ -79,7 +79,7 @@ public interface HealthbarIndicatorsConfig extends Config
 	)
 	default int zoomDamping()
 	{
-		return 50;
+		return 0;
 	}
 
 	@ConfigItem(
