@@ -8,7 +8,7 @@ https://github.com/user-attachments/assets/a37d92ef-f13f-4fc3-a484-5879c3c72216
 
 ## Features
 
-- **Track potions, buffs, prayers, and debuffs** — choose from 60+ effects including combat potions, divine potions, stamina, antifire, antipoison, prayers, thralls, and more
+- **Track potions, buffs, and debuffs** — choose from 20+ effects including combat potions, divine potions, stamina, antifire, antipoison, thralls, and more
 - **Setup presets** — create multiple named setups (e.g. "Bossing", "Slayer", "PvP") and switch between them from the side panel
 - **Two indicator modes** — "On Expire" shows when an effect wears off; "While Active" shows the entire time an effect is active (useful for debuffs like Teleblock)
 - **Optional blinking** — disable blinking to keep triggered indicators continuously visible
@@ -39,9 +39,6 @@ Stamina, Antifire, Super Antifire, Antipoison, Antivenom, Imbued Heart, Saturate
 
 ### Debuffs
 Teleblock, In Wilderness
-
-### Prayers
-All standard prayers, protection prayers, Piety, Rigour, Augury, Preserve, Deadeye, Mystic Vigour, and all Ruinous Powers prayers
 
 
 ## Images

@@ -77,7 +77,7 @@ public class IndicatorSetupTest
 	{
 		List<TrackedEffectEntry> entries = Arrays.asList(
 			new TrackedEffectEntry(TrackedEffect.SUPER_COMBAT.name(), BlinkMode.ON_EXPIRE, 9, 20),
-			new TrackedEffectEntry(TrackedEffect.PROTECT_FROM_MELEE.name(), BlinkMode.ON_EXPIRE, 0, 0)
+			new TrackedEffectEntry(TrackedEffect.STAMINA.name(), BlinkMode.ON_EXPIRE, 0, 0)
 		);
 		IndicatorSetup original = new IndicatorSetup("PvM", entries);
 

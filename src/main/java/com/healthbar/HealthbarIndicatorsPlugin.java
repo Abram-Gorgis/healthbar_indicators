@@ -79,7 +79,7 @@ import net.runelite.client.util.Text;
 @PluginDescriptor(
 	name = "Healthbar Indicators",
 	description = "Flashes indicator icons above your character when tracked effects expire or activate",
-	tags = {"health", "indicator", "flashing", "potion", "prayer", "overlay", "timer"}
+	tags = {"health", "indicator", "flashing", "potion", "overlay", "timer"}
 )
 public class HealthbarIndicatorsPlugin extends Plugin
 {
@@ -477,9 +477,6 @@ public class HealthbarIndicatorsPlugin extends Plugin
 		{
 			case VARBIT:
 				return client.getVarbitValue(effect.getVarbitId()) > 0;
-
-			case PRAYER:
-				return client.isPrayerActive(effect.getPrayer());
 
 			case POISON_IMMUNITY:
 				return client.getVarpValue(VarPlayerID.POISON) < 0;

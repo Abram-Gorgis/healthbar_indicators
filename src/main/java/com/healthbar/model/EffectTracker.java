@@ -121,7 +121,7 @@ public class EffectTracker
 	 * @param active               whether the effect is currently active
 	 * @param divineActive         whether the divine counterpart varbit is active
 	 * @param requireDrinkDetection if true, only flash if a drink was detected (skill boosts);
-	 *                              if false, always flash on expire (prayers, varbits)
+	 *                              if false, always flash on expire (varbits and other non-skill effects)
 	 * @param now                  current time in millis
 	 */
 	public void processOnExpire(boolean active, boolean divineActive,

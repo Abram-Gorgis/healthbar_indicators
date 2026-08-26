@@ -28,7 +28,6 @@ public enum EffectDetectionType
 {
 	SKILL_BOOST,
 	VARBIT,
-	PRAYER,
 	CHAT_MESSAGE,
 	TIMED_CHAT_MESSAGE,
 	POISON_IMMUNITY,

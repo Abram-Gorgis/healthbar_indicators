@@ -47,7 +47,6 @@ import net.runelite.api.InventoryID;
 import net.runelite.api.Item;
 import net.runelite.api.ItemContainer;
 import net.runelite.api.ItemID;
-import net.runelite.api.Prayer;
 import net.runelite.api.Skill;
 import net.runelite.api.Varbits;
 import net.runelite.api.events.ChatMessage;
@@ -457,71 +456,6 @@ public class HealthbarIndicatorsPluginUnitTest
 	}
 
 	// =====================================================
-	// Prayer Tests (PRAYER detection, ON_EXPIRE)
-	// =====================================================
-
-	@Test
-	public void testPrayerActivateAndDeactivate()
-	{
-		setTrackedEntries(entry(TrackedEffect.PROTECT_FROM_MELEE, BlinkMode.ON_EXPIRE, 0, 20));
-
-		when(client.isPrayerActive(Prayer.PROTECT_FROM_MELEE)).thenReturn(true);
-		plugin.onVarbitChanged(varbitChanged());
-		assertTrue("Should not flash while prayer is active", plugin.getFlashingEntries().isEmpty());
-
-		when(client.isPrayerActive(Prayer.PROTECT_FROM_MELEE)).thenReturn(false);
-		plugin.onVarbitChanged(varbitChanged());
-
-		assertEquals("Should flash when prayer deactivated", 1, plugin.getFlashingEntries().size());
-	}
-
-	@Test
-	public void testPrayerReactivateStopsFlashing()
-	{
-		setTrackedEntries(entry(TrackedEffect.PIETY, BlinkMode.ON_EXPIRE, 0, 20));
-
-		when(client.isPrayerActive(Prayer.PIETY)).thenReturn(true);
-		plugin.onVarbitChanged(varbitChanged());
-		when(client.isPrayerActive(Prayer.PIETY)).thenReturn(false);
-		plugin.onVarbitChanged(varbitChanged());
-		assertEquals(1, plugin.getFlashingEntries().size());
-
-		when(client.isPrayerActive(Prayer.PIETY)).thenReturn(true);
-		plugin.onVarbitChanged(varbitChanged());
-
-		assertTrue("Reactivating prayer should stop flashing", plugin.getFlashingEntries().isEmpty());
-	}
-
-	@Test
-	public void testPrayerNoFalseFlashOnLogin()
-	{
-		setTrackedEntries(entry(TrackedEffect.RIGOUR, BlinkMode.ON_EXPIRE, 0, 20));
-
-		when(client.isPrayerActive(Prayer.RIGOUR)).thenReturn(false);
-		plugin.onVarbitChanged(varbitChanged());
-
-		assertTrue("Should not flash prayer on login", plugin.getFlashingEntries().isEmpty());
-	}
-
-	@Test
-	public void testPrayerWhileActiveMode()
-	{
-		setTrackedEntries(entry(TrackedEffect.PROTECT_FROM_MISSILES, BlinkMode.WHILE_ACTIVE, 0, 20));
-
-		when(client.isPrayerActive(Prayer.PROTECT_FROM_MISSILES)).thenReturn(false);
-		plugin.onVarbitChanged(varbitChanged());
-		assertTrue(plugin.getFlashingEntries().isEmpty());
-
-		when(client.isPrayerActive(Prayer.PROTECT_FROM_MISSILES)).thenReturn(true);
-		plugin.onVarbitChanged(varbitChanged());
-		assertEquals("WHILE_ACTIVE should flash when prayer is on", 1, plugin.getFlashingEntries().size());
-
-		when(client.isPrayerActive(Prayer.PROTECT_FROM_MISSILES)).thenReturn(false);
-		plugin.onVarbitChanged(varbitChanged());
-		assertTrue("WHILE_ACTIVE should stop when prayer is off", plugin.getFlashingEntries().isEmpty());
-	}
-
-	// =====================================================
 	// Thrall Tests (CHAT_MESSAGE + deactivation varbit)
 	// =====================================================
 
@@ -665,11 +599,10 @@ public class HealthbarIndicatorsPluginUnitTest
 	@Test
 	public void testHoppingResetsTrackers()
 	{
-		setTrackedEntries(entry(TrackedEffect.PROTECT_FROM_MELEE, BlinkMode.ON_EXPIRE, 0, 20));
-
-		when(client.isPrayerActive(Prayer.PROTECT_FROM_MELEE)).thenReturn(true);
-		plugin.onVarbitChanged(varbitChanged());
-		when(client.isPrayerActive(Prayer.PROTECT_FROM_MELEE)).thenReturn(false);
+		setTrackedEntries(entry(TrackedEffect.THRALL_ACTIVE, BlinkMode.ON_EXPIRE, 0, 20));
+		when(client.getVarbitValue(Varbits.RESURRECT_THRALL)).thenReturn(1);
+		plugin.onChatMessage(chatMessage("You resurrect a lesser ghostly thrall."));
+		when(client.getVarbitValue(Varbits.RESURRECT_THRALL)).thenReturn(0);
 		plugin.onVarbitChanged(varbitChanged());
 		assertEquals(1, plugin.getFlashingEntries().size());
 
@@ -957,18 +890,13 @@ public class HealthbarIndicatorsPluginUnitTest
 	@Test
 	public void testMultipleEffectsFlashIndependently()
 	{
-		setTrackedEntries(
-			entry(TrackedEffect.SUPER_COMBAT, BlinkMode.ON_EXPIRE, 0, 20),
-			entry(TrackedEffect.PROTECT_FROM_MELEE, BlinkMode.ON_EXPIRE, 0, 20)
-		);
+		setTrackedEntries(entry(TrackedEffect.SUPER_COMBAT, BlinkMode.ON_EXPIRE, 0, 20));
 		when(client.getVarbitValue(anyInt())).thenReturn(0);
 		establishCombatBaseline();
 
-		// Both active
+		// Potion active
 		simulateBoost(Skill.ATTACK, 99, 118);
 		plugin.onStatChanged(statChanged(Skill.ATTACK));
-		when(client.isPrayerActive(Prayer.PROTECT_FROM_MELEE)).thenReturn(true);
-		plugin.onVarbitChanged(varbitChanged());
 		assertTrue(plugin.getFlashingEntries().isEmpty());
 
 		// Only potion expires
@@ -978,12 +906,6 @@ public class HealthbarIndicatorsPluginUnitTest
 		List<TrackedEffectEntry> flashing = plugin.getFlashingEntries();
 		assertEquals("Only expired effect should flash", 1, flashing.size());
 		assertEquals(TrackedEffect.SUPER_COMBAT.name(), flashing.get(0).getEffectName());
-
-		// Prayer also deactivates
-		when(client.isPrayerActive(Prayer.PROTECT_FROM_MELEE)).thenReturn(false);
-		plugin.onVarbitChanged(varbitChanged());
-
-		assertEquals("Both should now be flashing", 2, plugin.getFlashingEntries().size());
 	}
 
 	// =====================================================
