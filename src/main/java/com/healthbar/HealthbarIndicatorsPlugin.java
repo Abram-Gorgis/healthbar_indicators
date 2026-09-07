@@ -36,6 +36,7 @@ import com.healthbar.timing.TimedChatEffectRegistry;
 import com.healthbar.timing.TimedChatEffectRegistry.TimedChatEffect;
 import com.healthbar.timing.TimedEffectManager;
 import com.healthbar.ui.HealthbarIndicatorsOverlay;
+import com.healthbar.ui.PrayerPointBarOverlay;
 import com.healthbar.ui.HealthbarIndicatorsPanel;
 import java.awt.image.BufferedImage;
 import java.lang.reflect.Type;
@@ -106,6 +107,9 @@ public class HealthbarIndicatorsPlugin extends Plugin
 	private HealthbarIndicatorsOverlay overlay;
 
 	@Inject
+	private PrayerPointBarOverlay prayerPointBarOverlay;
+
+	@Inject
 	private ClientToolbar clientToolbar;
 
 	@Inject
@@ -134,6 +138,7 @@ public class HealthbarIndicatorsPlugin extends Plugin
 		getTimedEffectManager();
 		reloadTrackedEntries();
 		overlayManager.add(overlay);
+		overlayManager.add(prayerPointBarOverlay);
 
 		panel = new HealthbarIndicatorsPanel(gson, configManager, itemManager, spriteManager);
 		panel.setResetCallback(() -> clientThread.invokeLater(this::resetAllTrackers));
@@ -162,6 +167,7 @@ public class HealthbarIndicatorsPlugin extends Plugin
 			timedEffectManager.clear();
 		}
 		overlayManager.remove(overlay);
+		overlayManager.remove(prayerPointBarOverlay);
 		if (navButton != null)
 		{
 			clientToolbar.removeNavigation(navButton);
@@ -407,7 +413,7 @@ public class HealthbarIndicatorsPlugin extends Plugin
 				continue;
 			}
 
-			if (tracker.isTimedOut(entry.getTimeoutMinutes(), now))
+			if (tracker.isTimedOutMillis(entry.getTimeoutMillis(), now))
 			{
 				tracker.reset();
 				chatActivatedEffects.remove(effect);

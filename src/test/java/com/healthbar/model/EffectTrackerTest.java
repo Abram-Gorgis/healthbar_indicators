@@ -304,6 +304,20 @@ public class EffectTrackerTest
 	}
 
 	@Test
+	public void secondsTimeoutPreservesBoundaryAndNeverTimeoutBehavior()
+	{
+		assertFalse(tracker.isTimedOutMillis(30_000, 100_000));
+		tracker.activate(1000);
+		tracker.tryExpire(2000);
+		assertFalse(tracker.isTimedOutMillis(30_000, 31_999));
+		assertFalse(tracker.isTimedOutMillis(30_000, 32_000));
+		assertTrue(tracker.isTimedOutMillis(30_000, 32_001));
+		assertFalse(tracker.isTimedOutMillis(90_000, 92_000));
+		assertTrue(tracker.isTimedOutMillis(90_000, 92_001));
+		assertFalse(tracker.isTimedOutMillis(0, 999_999_999));
+	}
+
+	@Test
 	public void testIsTimedOutAfterTimeout()
 	{
 		tracker.activate(1000);

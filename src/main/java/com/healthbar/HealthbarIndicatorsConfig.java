@@ -27,6 +27,7 @@ package com.healthbar;
 import net.runelite.client.config.Config;
 import net.runelite.client.config.ConfigGroup;
 import net.runelite.client.config.ConfigItem;
+import net.runelite.client.config.ConfigSection;
 import net.runelite.client.config.Range;
 
 @ConfigGroup(HealthbarIndicatorsConfig.CONFIG_GROUP)
@@ -115,6 +116,50 @@ public interface HealthbarIndicatorsConfig extends Config
 	default int offsetY()
 	{
 		return 0;
+	}
+
+	@ConfigSection(
+		name = "Prayer Point Bar",
+		description = "Display current prayer points below your character's health bar",
+		position = 7
+	)
+	String PRAYER_BAR_SECTION = "prayerPointBar";
+
+	@ConfigItem(
+		keyName = "showPrayerPointBar",
+		name = "Show Prayer Point Bar",
+		description = "Show a light-blue prayer point bar below your health bar, across all setups",
+		section = PRAYER_BAR_SECTION,
+		position = 0
+	)
+	default boolean showPrayerPointBar()
+	{
+		return false;
+	}
+
+	@ConfigItem(
+		keyName = "prayerBarOnlyWithHealthBar",
+		name = "Only with health bar",
+		description = "When enabled, show only while health-bar data is available. Disable to always show during gameplay.",
+		section = PRAYER_BAR_SECTION,
+		position = 1
+	)
+	default boolean prayerBarOnlyWithHealthBar()
+	{
+		return true;
+	}
+
+	@Range(min = 0, max = 99)
+	@ConfigItem(
+		keyName = "prayerBarWarningThreshold",
+		name = "Low prayer threshold",
+		description = "Flash the depleted portion red below this many prayer points (0 disables). Uses Flash Rate (ms).",
+		section = PRAYER_BAR_SECTION,
+		position = 2
+	)
+	default int prayerBarWarningThreshold()
+	{
+		return 10;
 	}
 
 	@ConfigItem(

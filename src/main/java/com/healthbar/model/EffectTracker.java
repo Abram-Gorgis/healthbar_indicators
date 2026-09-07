@@ -244,8 +244,13 @@ public class EffectTracker
 	 */
 	public boolean isTimedOut(int timeoutMinutes, long now)
 	{
-		return timeoutMinutes > 0 && expiredAtMillis > 0
-			&& now - expiredAtMillis > timeoutMinutes * MILLIS_PER_MINUTE;
+		return isTimedOutMillis(timeoutMinutes * MILLIS_PER_MINUTE, now);
+	}
+
+	public boolean isTimedOutMillis(long timeoutMillis, long now)
+	{
+		return timeoutMillis > 0 && expiredAtMillis > 0
+			&& now - expiredAtMillis > timeoutMillis;
 	}
 
 	public void reset()

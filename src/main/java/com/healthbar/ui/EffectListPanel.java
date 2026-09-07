@@ -70,8 +70,8 @@ public class EffectListPanel extends JPanel
 	private static final int ICON_COL = 0;
 	private static final int CONTENT_COL = 1;
 	private static final int REMOVE_COL = 2;
-	private static final int ROW_HEIGHT_WITH_THRESHOLD = 105;
-	private static final int ROW_HEIGHT_WITHOUT_THRESHOLD = 80;
+	private static final int ROW_HEIGHT_WITH_THRESHOLD = 130;
+	private static final int ROW_HEIGHT_WITHOUT_THRESHOLD = 105;
 	private static final int FIELD_WIDTH = 40;
 	private static final int FIELD_HEIGHT = 20;
 	private static final int FIELD_COLUMNS = 3;
@@ -238,9 +238,20 @@ public class EffectListPanel extends JPanel
 		TrackedEffect effect = entry.getEffect();
 		if (effect == null)
 		{
-			JPanel errorPanel = new JPanel();
+			JPanel errorPanel = new JPanel(new GridBagLayout());
 			errorPanel.setBackground(ColorScheme.DARKER_GRAY_COLOR);
-			errorPanel.add(new JLabel("Unknown: " + entry.getEffectName()));
+			errorPanel.setBorder(new EmptyBorder(6, 8, 6, 8));
+			GridBagConstraints c = new GridBagConstraints();
+			c.gridx = 0;
+			c.gridy = 0;
+			c.gridwidth = REMOVE_COL;
+			c.weightx = 1;
+			c.fill = GridBagConstraints.HORIZONTAL;
+			JLabel label = new JLabel("Unknown: " + entry.getEffectName());
+			label.setToolTipText("This effect is no longer supported. Remove it with X.");
+			errorPanel.add(label, c);
+			c.gridwidth = 1;
+			addRemoveButton(errorPanel, c, entry, 1);
 			return errorPanel;
 		}
 
@@ -270,7 +281,7 @@ public class EffectListPanel extends JPanel
 	{
 		c.gridx = ICON_COL;
 		c.gridy = 0;
-		c.gridheight = effect.supportsThreshold() ? 4 : 3;
+		c.gridheight = effect.supportsThreshold() ? 5 : 4;
 		c.anchor = GridBagConstraints.CENTER;
 		JLabel iconLabel = new JLabel();
 		loadIcon(effect, iconLabel);
@@ -355,10 +366,15 @@ public class EffectListPanel extends JPanel
 
 		JLabel timeoutLabel = new JLabel("Timeout (min):");
 		timeoutLabel.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
-		timeoutLabel.setToolTipText("Stop tracking after inactive for this many minutes (0 = never timeout)");
+		String tooltip = "Minutes + seconds until tracking times out; both 0 = never timeout";
+		timeoutLabel.setToolTipText(tooltip);
+		// Reserve the same label column on both rows so the input boxes line up.
+		int timeoutLabelWidth = timeoutLabel.getPreferredSize().width;
 		timeoutPanel.add(timeoutLabel);
 
 		JTextField timeoutField = new JTextField(String.valueOf(entry.getTimeoutMinutes()), FIELD_COLUMNS);
+		timeoutField.setName("timeoutMinutes");
+		timeoutField.setToolTipText(tooltip);
 		timeoutField.setPreferredSize(new Dimension(FIELD_WIDTH, FIELD_HEIGHT));
 		addSaveOnChangeListener(timeoutField, val ->
 		{
@@ -368,7 +384,27 @@ public class EffectListPanel extends JPanel
 		timeoutPanel.add(timeoutField);
 
 		panel.add(timeoutPanel, c);
-		return row + 1;
+		c.gridy = row + 1;
+		JPanel secondsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, ROW_SPACING, 0));
+		secondsPanel.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+		JLabel secondsLabel = new JLabel("+ seconds:");
+		secondsLabel.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
+		secondsLabel.setToolTipText(tooltip);
+		secondsLabel.setPreferredSize(new Dimension(timeoutLabelWidth,
+			secondsLabel.getPreferredSize().height));
+		secondsPanel.add(secondsLabel);
+		JTextField secondsField = new JTextField(String.valueOf(entry.getTimeoutSeconds()), FIELD_COLUMNS);
+		secondsField.setName("timeoutSeconds");
+		secondsField.setToolTipText(tooltip);
+		secondsField.setPreferredSize(new Dimension(FIELD_WIDTH, FIELD_HEIGHT));
+		addSaveOnChangeListener(secondsField, val ->
+		{
+			entry.setTimeoutSeconds(val);
+			onSave.run();
+		});
+		secondsPanel.add(secondsField);
+		panel.add(secondsPanel, c);
+		return row + 2;
 	}
 
 	private void addRemoveButton(JPanel panel, GridBagConstraints c, TrackedEffectEntry entry, int totalRows)

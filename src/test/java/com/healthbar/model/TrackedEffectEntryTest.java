@@ -25,6 +25,7 @@
 package com.healthbar.model;
 
 import com.healthbar.timing.TimedChatEffectRegistry;
+import com.google.gson.Gson;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -39,6 +40,37 @@ import org.junit.Test;
 
 public class TrackedEffectEntryTest
 {
+	@Test
+	public void legacyTimeoutJsonKeepsMinutesAndDefaultsSecondsToZero()
+	{
+		Gson gson = new Gson();
+		TrackedEffectEntry entry = gson.fromJson("{\"timeoutMinutes\":20}", TrackedEffectEntry.class);
+		assertEquals(0, entry.getTimeoutSeconds());
+		assertEquals(1_200_000L, entry.getTimeoutMillis());
+		assertEquals(0, gson.fromJson("{}", TrackedEffectEntry.class).getTimeoutMillis());
+		assertEquals(0, gson.fromJson("{\"timeoutMinutes\":0}", TrackedEffectEntry.class).getTimeoutMillis());
+	}
+
+	@Test
+	public void secondsAndMixedTimeoutsSurviveJsonRoundTrip()
+	{
+		Gson gson = new Gson();
+		TrackedEffectEntry entry = new TrackedEffectEntry("STAMINA", BlinkMode.ON_EXPIRE, 0, 0);
+		entry.setTimeoutSeconds(30);
+		assertEquals(30_000L, gson.fromJson(gson.toJson(entry), TrackedEffectEntry.class).getTimeoutMillis());
+		entry.setTimeoutMinutes(1);
+		TrackedEffectEntry restored = gson.fromJson(gson.toJson(entry), TrackedEffectEntry.class);
+		assertEquals(1, restored.getTimeoutMinutes());
+		assertEquals(30, restored.getTimeoutSeconds());
+		assertEquals(90_000L, restored.getTimeoutMillis());
+		entry.setTimeoutMinutes(Integer.MAX_VALUE);
+		entry.setTimeoutSeconds(Integer.MAX_VALUE);
+		assertEquals(Integer.MAX_VALUE * 61_000L, entry.getTimeoutMillis());
+		entry.setTimeoutMinutes(-1);
+		entry.setTimeoutSeconds(-1);
+		assertEquals(0, entry.getTimeoutMillis());
+	}
+
 	@Test
 	public void testGetEffectResolvesValidName()
 	{

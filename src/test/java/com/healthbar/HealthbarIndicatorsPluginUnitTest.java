@@ -736,6 +736,24 @@ public class HealthbarIndicatorsPluginUnitTest
 		assertTrue("Expired flashing should time out", plugin.getFlashingEntries().isEmpty());
 	}
 
+	@Test
+	public void testExpiredFlashingUsesSecondsFromLoadout()
+	{
+		TrackedEffectEntry secondsEntry = entry(TrackedEffect.SUPER_COMBAT, BlinkMode.ON_EXPIRE, 0, 0);
+		secondsEntry.setTimeoutSeconds(30);
+		setTrackedEntries(secondsEntry);
+		when(client.getVarbitValue(anyInt())).thenReturn(0);
+		establishCombatBaseline();
+		simulateBoost(Skill.ATTACK, 99, 118);
+		plugin.onStatChanged(statChanged(Skill.ATTACK));
+		simulateBoost(Skill.ATTACK, 99, 99);
+		plugin.onStatChanged(statChanged(Skill.ATTACK));
+		assertEquals(1, plugin.getFlashingEntries().size());
+		EffectTracker tracker = getTrackerMap().get(TrackedEffect.SUPER_COMBAT);
+		backdateExpiry(tracker, System.currentTimeMillis() - 31_000L);
+		assertTrue(plugin.getFlashingEntries().isEmpty());
+	}
+
 	// =====================================================
 	// World Hop Suppress Tests
 	// =====================================================

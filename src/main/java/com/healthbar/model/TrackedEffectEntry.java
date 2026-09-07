@@ -36,7 +36,13 @@ public class TrackedEffectEntry
 	private String effectName; // TrackedEffect enum name
 	private BlinkMode blinkMode;
 	private int dropThreshold; // For skill boost effects: alert when boost drops to this level or below (0 = only alert when fully gone)
-	private int timeoutMinutes; // Per-effect activity timeout in minutes (0 = never timeout)
+	private int timeoutMinutes; // Legacy minutes component; retained for saved configs.
+	private int timeoutSeconds; // Additional seconds; absent in old configs, defaults to zero.
+
+	public long getTimeoutMillis()
+	{
+		return Math.max(0, timeoutMinutes) * 60_000L + Math.max(0, timeoutSeconds) * 1_000L;
+	}
 
 	private transient TrackedEffect cachedEffect;
 	private transient boolean effectResolved;
